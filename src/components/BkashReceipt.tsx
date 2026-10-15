@@ -150,7 +150,7 @@ function MessageCard({ params }: { params: ReturnType<typeof getUrlParams> }) {
         <p>
           from <a href={`tel:${params.sender}`}>{params.sender}</a>. Ref. {params.ref}
         </p>
-        <p>Rock Fee Tk {params.fee}. Balance Tk</p>
+        <p>Fee Tk {params.fee}. Balance Tk</p>
         <p>{params.balance}. TrxID {params.trxId}</p>
         <p>at {params.date}</p>
       </div>
