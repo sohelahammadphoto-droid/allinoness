@@ -92,14 +92,25 @@ Pass `type=binance`, `type=bk`, or `type=ng` (or `app=...`):
 ### 🌸 bKash Parameters
 | Param | Default | Description |
 | :--- | :--- | :--- |
-| `amount` | `12,800.00` | Received Amount (Tk) |
-| `sender` | `01840172190` | Sender mobile number |
-| `ref` | `Black Rock` | Reference Note |
-| `balance` | `23,426.85` | New Balance (Tk) |
-| `trxId` | `DJE3VTZ0VN` | Transaction ID |
-| `fee` | `0.00` | Fee |
-| `date` | `15/10/2026 08:42` | Transaction Date & Time |
-| `metaTime` | `Today 8:42 AM` | Message header timestamp |
+| `amount` | `12,800.00` | Message 1 Received Amount (Tk) |
+| `sender` | `01840172190` | Message 1 Sender mobile number |
+| `ref` | `Black Rock` | Message 1 Reference Note |
+| `balance` | `23,426.85` | Message 1 New Balance (Tk) |
+| `trxId` | `DJE3VTZ0VN` | Message 1 Transaction ID |
+| `fee` | `0.00` | Message 1 Fee |
+| `time` | *Current BD Time* | Message 1 & Status bar custom time (e.g. `16:05`) |
+| `date` | *Current BD Date & Time* | Message 1 Transaction Date & Time |
+| `metaTime` | *Auto-synchronized* | Message 1 timestamp (`Today 8:42 AM`) |
+| `second` | `false` | Trigger 2nd message (`true` / `false` or pass `amount2`) |
+| `amount2` | `5,200.00` | Message 2 Received Amount (Tk) |
+| `sender2` | `01840172190` | Message 2 Sender mobile number |
+| `ref2` | `Payment` | Message 2 Reference Note |
+| `balance2` | `28,626.85` | Message 2 New Balance (Tk) |
+| `trxId2` | `EKF8WUZ1XP` | Message 2 Transaction ID |
+| `fee2` | `0.00` | Message 2 Fee |
+| `time2` | *Current BD Time* | Message 2 custom time |
+| `date2` | *Current BD Date & Time* | Message 2 Transaction Date & Time |
+| `metaTime2` | *Auto-synchronized* | Message 2 timestamp |
 
 ### 🟠 Nagad Parameters
 | Param | Default | Description |
