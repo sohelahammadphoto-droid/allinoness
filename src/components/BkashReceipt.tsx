@@ -140,11 +140,50 @@ function formatBkashMetaTime(dateStr: string): string {
   return "Today 8:42 AM";
 }
 
+function getBangladeshDateTime(): { dateStr: string; timeStr: string; day: string; month: string; year: string } {
+  const formatter = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Dhaka",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+
+  const parts = formatter.formatToParts(new Date());
+  const day = parts.find((p) => p.type === "day")?.value || "15";
+  const month = parts.find((p) => p.type === "month")?.value || "10";
+  const year = parts.find((p) => p.type === "year")?.value || "2026";
+  const hour = parts.find((p) => p.type === "hour")?.value || "12";
+  const minute = parts.find((p) => p.type === "minute")?.value || "00";
+
+  return {
+    dateStr: `${day}/${month}/${year} ${hour}:${minute}`,
+    timeStr: `${hour}:${minute}`,
+    day,
+    month,
+    year,
+  };
+}
+
 const getUrlParams = () => {
   const searchParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : new URLSearchParams();
   const initialSpeed = getRandomSpeed();
   const initialBattery = getRandomBattery();
-  const dateVal = searchParams.get("date") || searchParams.get("datetime") || "15/10/2026 08:42";
+  const nowBd = getBangladeshDateTime();
+
+  const timeParam = searchParams.get("time") || searchParams.get("clock") || "";
+  const userDate = searchParams.get("date") || searchParams.get("datetime");
+
+  let dateVal: string;
+  if (userDate) {
+    dateVal = userDate;
+  } else if (timeParam) {
+    dateVal = `${nowBd.day}/${nowBd.month}/${nowBd.year} ${timeParam}`;
+  } else {
+    dateVal = nowBd.dateStr;
+  }
 
   return {
     amount: searchParams.get("amount") || "12,800.00",
@@ -155,7 +194,7 @@ const getUrlParams = () => {
     trxId: searchParams.get("trxId") || searchParams.get("trxid") || "DJE3VTZ0VN",
     date: dateVal,
     metaTime: searchParams.get("metaTime") || searchParams.get("metatime") || formatBkashMetaTime(dateVal),
-    clock: searchParams.get("time") || searchParams.get("clock") || "",
+    clock: timeParam,
     speedVal: searchParams.get("speed") || initialSpeed.val,
     speedUnit: searchParams.get("unit") || initialSpeed.unit,
     battery: parseInt(searchParams.get("battery") || String(initialBattery), 10),

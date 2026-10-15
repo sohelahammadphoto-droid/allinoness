@@ -164,10 +164,38 @@ function formatNagadMetaTime(dateStr: string): string {
   return dateStr;
 }
 
+function getBangladeshDateTime(): { dateStr: string; timeStr: string; day: string; month: string; year: string } {
+  const formatter = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Dhaka",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+
+  const parts = formatter.formatToParts(new Date());
+  const day = parts.find((p) => p.type === "day")?.value || "15";
+  const month = parts.find((p) => p.type === "month")?.value || "10";
+  const year = parts.find((p) => p.type === "year")?.value || "2026";
+  const hour = parts.find((p) => p.type === "hour")?.value || "12";
+  const minute = parts.find((p) => p.type === "minute")?.value || "00";
+
+  return {
+    dateStr: `${day}/${month}/${year} ${hour}:${minute}`,
+    timeStr: `${hour}:${minute}`,
+    day,
+    month,
+    year,
+  };
+}
+
 const getUrlParams = () => {
   const searchParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : new URLSearchParams();
   const initialSpeed = getRandomSpeed();
   const initialBattery = getRandomBattery();
+  const nowBd = getBangladeshDateTime();
 
   // Trigger 2nd message ONLY if explicit 2nd message params or trigger flags are present
   const hasSecondTrigger =
@@ -179,17 +207,40 @@ const getUrlParams = () => {
     searchParams.has("ref2") ||
     searchParams.has("date2") ||
     searchParams.has("datetime2") ||
+    searchParams.has("time2") ||
     searchParams.get("messages") === "2" ||
     searchParams.get("count") === "2" ||
     searchParams.get("second") === "true" ||
     searchParams.get("showSecond") === "true" ||
     searchParams.get("msg2") === "true";
 
-  const date1 = searchParams.get("date") || searchParams.get("datetime") || searchParams.get("date1") || "01/09/2026 16:05";
-  const date2 = searchParams.get("date2") || searchParams.get("datetime2") || "01/09/2026 16:15";
+  // Parameter time: if used, use that time; otherwise current BD time
+  const timeParam = searchParams.get("time") || searchParams.get("clock") || "";
+  const userDate = searchParams.get("date") || searchParams.get("datetime") || searchParams.get("date1");
+
+  let date1: string;
+  if (userDate) {
+    date1 = userDate;
+  } else if (timeParam) {
+    date1 = `${nowBd.day}/${nowBd.month}/${nowBd.year} ${timeParam}`;
+  } else {
+    date1 = nowBd.dateStr;
+  }
+
+  const time2Param = searchParams.get("time2") || searchParams.get("clock2") || "";
+  const userDate2 = searchParams.get("date2") || searchParams.get("datetime2");
+
+  let date2: string;
+  if (userDate2) {
+    date2 = userDate2;
+  } else if (time2Param) {
+    date2 = `${nowBd.day}/${nowBd.month}/${nowBd.year} ${time2Param}`;
+  } else {
+    date2 = date1;
+  }
 
   return {
-    clock: searchParams.get("time") || searchParams.get("clock") || "",
+    clock: timeParam,
     speedVal: searchParams.get("speed") || initialSpeed.val,
     speedUnit: searchParams.get("unit") || initialSpeed.unit,
     battery: parseInt(searchParams.get("battery") || String(initialBattery), 10),
