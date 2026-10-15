@@ -119,10 +119,32 @@ function SignalBars({ count = 4 }: { count?: number }) {
   );
 }
 
+function formatBkashMetaTime(dateStr: string): string {
+  try {
+    const match = dateStr.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})\s+(\d{1,2}):(\d{2})(?::\d{2})?(?:\s*(AM|PM))?/i);
+    if (match) {
+      let hours = parseInt(match[4], 10);
+      const mins = match[5];
+      let ampm = match[6] ? match[6].toUpperCase() : "";
+
+      if (!ampm) {
+        ampm = hours >= 12 ? "PM" : "AM";
+        hours = hours % 12 || 12;
+      }
+
+      return `Today ${hours}:${mins} ${ampm}`;
+    }
+  } catch {
+    // fallback
+  }
+  return "Today 8:42 AM";
+}
+
 const getUrlParams = () => {
   const searchParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : new URLSearchParams();
   const initialSpeed = getRandomSpeed();
   const initialBattery = getRandomBattery();
+  const dateVal = searchParams.get("date") || searchParams.get("datetime") || "15/10/2026 08:42";
 
   return {
     amount: searchParams.get("amount") || "12,800.00",
@@ -131,8 +153,8 @@ const getUrlParams = () => {
     fee: searchParams.get("fee") || "0.00",
     balance: searchParams.get("balance") || "23,426.85",
     trxId: searchParams.get("trxId") || searchParams.get("trxid") || "DJE3VTZ0VN",
-    date: searchParams.get("date") || searchParams.get("datetime") || "15/10/2026 08:42",
-    metaTime: searchParams.get("metaTime") || searchParams.get("metatime") || "Today 8:42 AM",
+    date: dateVal,
+    metaTime: searchParams.get("metaTime") || searchParams.get("metatime") || formatBkashMetaTime(dateVal),
     clock: searchParams.get("time") || searchParams.get("clock") || "",
     speedVal: searchParams.get("speed") || initialSpeed.val,
     speedUnit: searchParams.get("unit") || initialSpeed.unit,

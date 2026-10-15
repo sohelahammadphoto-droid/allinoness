@@ -129,6 +129,41 @@ interface MessageData {
   metaTime: string;
 }
 
+function formatNagadMetaTime(dateStr: string): string {
+  try {
+    // Matches DD/MM/YYYY HH:mm or DD-MM-YYYY HH:mm
+    const match = dateStr.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})\s+(\d{1,2}):(\d{2})(?::\d{2})?(?:\s*(AM|PM))?/i);
+    if (match) {
+      const day = parseInt(match[1], 10);
+      const month = parseInt(match[2], 10);
+      let hours = parseInt(match[4], 10);
+      const mins = match[5];
+      let ampm = match[6] ? match[6].toUpperCase() : "";
+
+      if (!ampm) {
+        ampm = hours >= 12 ? "PM" : "AM";
+        hours = hours % 12 || 12;
+      }
+
+      return `${month}/${day} ${hours}:${mins}${ampm}`;
+    }
+
+    const d = new Date(dateStr);
+    if (!isNaN(d.getTime())) {
+      const month = d.getMonth() + 1;
+      const day = d.getDate();
+      let hours = d.getHours();
+      const mins = String(d.getMinutes()).padStart(2, "0");
+      const ampm = hours >= 12 ? "PM" : "AM";
+      hours = hours % 12 || 12;
+      return `${month}/${day} ${hours}:${mins}${ampm}`;
+    }
+  } catch {
+    // fallback
+  }
+  return dateStr;
+}
+
 const getUrlParams = () => {
   const searchParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : new URLSearchParams();
   const initialSpeed = getRandomSpeed();
@@ -150,6 +185,9 @@ const getUrlParams = () => {
     searchParams.get("showSecond") === "true" ||
     searchParams.get("msg2") === "true";
 
+  const date1 = searchParams.get("date") || searchParams.get("datetime") || searchParams.get("date1") || "01/09/2026 16:05";
+  const date2 = searchParams.get("date2") || searchParams.get("datetime2") || "01/09/2026 16:15";
+
   return {
     clock: searchParams.get("time") || searchParams.get("clock") || "",
     speedVal: searchParams.get("speed") || initialSpeed.val,
@@ -167,8 +205,8 @@ const getUrlParams = () => {
     ref: searchParams.get("ref") || searchParams.get("ref1") || "N/A",
     trxId: searchParams.get("trxId") || searchParams.get("trxid") || searchParams.get("trxId1") || "75X0LHYP",
     balance: searchParams.get("balance") || searchParams.get("balance1") || "5026.59",
-    date: searchParams.get("date") || searchParams.get("datetime") || searchParams.get("date1") || "01/09/2026 16:05",
-    metaTime1: searchParams.get("metaTime1") || searchParams.get("meta1") || searchParams.get("metaTime") || "9/1 5:47PM",
+    date: date1,
+    metaTime1: searchParams.get("metaTime1") || searchParams.get("meta1") || searchParams.get("metaTime") || formatNagadMetaTime(date1),
 
     // Message 2 parameters (separate and independent)
     amount2: searchParams.get("amount2") || "2000.00",
@@ -176,8 +214,8 @@ const getUrlParams = () => {
     ref2: searchParams.get("ref2") || "N/A",
     trxId2: searchParams.get("trxId2") || searchParams.get("trxid2") || "86K2MNPQ",
     balance2: searchParams.get("balance2") || "7026.59",
-    date2: searchParams.get("date2") || searchParams.get("datetime2") || "01/09/2026 16:15",
-    metaTime2: searchParams.get("metaTime2") || searchParams.get("meta2") || "9/1 5:51PM",
+    date2: date2,
+    metaTime2: searchParams.get("metaTime2") || searchParams.get("meta2") || formatNagadMetaTime(date2),
   };
 };
 
