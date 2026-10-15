@@ -104,14 +104,23 @@ Pass `type=binance`, `type=bk`, or `type=ng` (or `app=...`):
 ### 🟠 Nagad Parameters
 | Param | Default | Description |
 | :--- | :--- | :--- |
-| `amount` | `5000.00` | Received Amount (Tk) |
-| `sender` | `01718727784` | Sender mobile number |
-| `ref` | `N/A` | Reference Note |
-| `balance` | `5026.59` | New Balance (Tk) |
-| `trxId` | `75X0LHYP` | Transaction ID |
-| `date` | `01/09/2026 16:05` | Transaction Date & Time |
+| `amount` | `5000.00` | Message 1 Received Amount (Tk) |
+| `sender` | `01718727784` | Message 1 Sender mobile number |
+| `ref` | `N/A` | Message 1 Reference Note |
+| `balance` | `5026.59` | Message 1 New Balance (Tk) |
+| `trxId` | `75X0LHYP` | Message 1 Transaction ID |
+| `date` | `01/09/2026 16:05` | Message 1 Transaction Date & Time |
 | `metaTime1` | `9/1 5:47PM` | Message 1 timestamp |
+| `second` | `false` | Trigger 2nd message (`true` / `false` or pass `amount2`) |
+| `amount2` | `2000.00` | Message 2 Received Amount (Tk) |
+| `sender2` | `01718727784` | Message 2 Sender mobile number |
+| `ref2` | `N/A` | Message 2 Reference Note |
+| `balance2` | `7026.59` | Message 2 New Balance (Tk) |
+| `trxId2` | `86K2MNPQ` | Message 2 Transaction ID |
+| `date2` | `01/09/2026 16:15` | Message 2 Transaction Date & Time |
 | `metaTime2` | `9/1 5:51PM` | Message 2 timestamp |
+
+> 💡 **Nagad Single vs Dual Message Trigger**: By default, passing single transaction data displays **1 single message**. When you provide 2nd message parameters (such as `&amount2=...`, `&trxId2=...`, or `&second=true`), Nagad automatically displays the 2nd message with its own separate parameters!
 
 ---
 
