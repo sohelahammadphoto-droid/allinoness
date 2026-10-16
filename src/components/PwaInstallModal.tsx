@@ -56,7 +56,7 @@ export default function PwaInstallModal({ isOpen, onClose }: PwaInstallModalProp
         </div>
 
         <div>
-          <h3 className="text-lg font-bold text-white tracking-tight">Install Receipt Studio App</h3>
+          <h3 className="text-lg font-bold text-white tracking-tight">Install Dark SS Maker App</h3>
           <p className="text-xs text-slate-400 mt-1">
             Install on your Android or iPhone for full-screen offline use without browser address bars!
           </p>

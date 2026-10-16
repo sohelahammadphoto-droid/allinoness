@@ -1,7 +1,7 @@
 {
-  "name": "Sky Fake Pay",
-  "short_name": "SkyFakePay",
-  "description": "Sky Fake Pay - Mobile API Statement & Payment Studio",
+  "name": "Dark SS Maker",
+  "short_name": "DarkSSMaker",
+  "description": "Dark SS Maker - Professional Mobile API Statement Studio",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
