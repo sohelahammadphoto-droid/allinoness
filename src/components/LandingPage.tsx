@@ -206,7 +206,13 @@ export default function LandingPage({ onGoToLogin, onGoToDashboard, onSelectServ
               {services.map((service) => (
                 <button
                   key={service.id}
-                  onClick={() => onSelectService(service)}
+                  onClick={() => {
+                    if (!session) {
+                      onGoToLogin()
+                    } else {
+                      onSelectService(service)
+                    }
+                  }}
                   className="bg-slate-900/80 hover:bg-slate-800/90 border border-slate-800 hover:border-slate-700 rounded-3xl p-6 text-center shadow-lg transition-all active:scale-[0.98] group cursor-pointer flex flex-col items-center justify-center"
                 >
                   <div
@@ -223,10 +229,17 @@ export default function LandingPage({ onGoToLogin, onGoToDashboard, onSelectServ
                     {service.subtitle || 'Statement Service'}
                   </p>
 
-                  <span className="mt-4 text-[11px] font-semibold text-indigo-400 flex items-center gap-1">
-                    <span>Open Generator</span>
-                    <ChevronRight className="w-3.5 h-3.5" />
-                  </span>
+                  {session ? (
+                    <span className="mt-4 text-[11px] font-semibold text-indigo-400 flex items-center gap-1">
+                      <span>Open Generator</span>
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </span>
+                  ) : (
+                    <span className="mt-4 text-[11px] font-semibold text-amber-400 flex items-center gap-1 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20">
+                      <Lock className="w-3 h-3 text-amber-400" />
+                      <span>Sign In to Generate</span>
+                    </span>
+                  )}
                 </button>
               ))}
             </div>

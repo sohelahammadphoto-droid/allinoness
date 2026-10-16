@@ -21,24 +21,34 @@ function getInitialView(): AppView {
   const view = searchParams.get('view')
   const toolName = searchParams.get('name') || searchParams.get('tool')
 
-  if (toolName) return 'tool_runner'
-  if (view === 'login') return 'login'
-  if (view === 'dashboard') return 'dashboard'
-  if (view === 'landing') return 'landing'
-  if (searchParams.has('type')) return 'generator'
-
-  // If user has a saved session in localStorage, stay in dashboard on refresh!
+  // Check saved session in localStorage
+  let hasValidSession = false
   try {
     const stored = localStorage.getItem('receipt_app_auth')
     if (stored) {
       const parsed = JSON.parse(stored)
       if (parsed && (parsed.token || parsed.user || parsed.role)) {
-        return 'dashboard'
+        hasValidSession = true
       }
     }
   } catch {}
 
-  return 'landing'
+  // STRICT LOGIN REQUIREMENT: If not logged in, user CANNOT generate!
+  if (!hasValidSession) {
+    if (toolName || searchParams.has('type') || view === 'dashboard' || view === 'generator' || view === 'tool_runner' || view === 'login') {
+      return 'login'
+    }
+    return 'landing'
+  }
+
+  // If user is logged in:
+  if (toolName) return 'tool_runner'
+  if (view === 'login') return 'dashboard'
+  if (view === 'dashboard') return 'dashboard'
+  if (view === 'landing') return 'landing'
+  if (searchParams.has('type')) return 'generator'
+
+  return 'dashboard'
 }
 
 export default function App() {
@@ -122,6 +132,22 @@ export default function App() {
 
   // Select a service from landing page
   const handleSelectService = (service: DynamicService) => {
+    // LOGIN MUST: If not logged in, force login immediately!
+    if (!session) {
+      goToLogin()
+      return
+    }
+
+    // If standard user, take them directly to the User Studio Dashboard
+    if (session.role === 'user') {
+      setCurrentView('dashboard')
+      const url = new URL(window.location.href)
+      url.searchParams.set('view', 'dashboard')
+      url.searchParams.set('service', service.service_key)
+      window.history.pushState({}, '', url.toString())
+      return
+    }
+
     const key = service.service_key.toLowerCase()
     if (key === 'bkash' || key === 'bk') {
       setActiveTemplate('bk')
@@ -181,6 +207,16 @@ export default function App() {
   // Check if we should hide navigation bars (for screenshotting / Puppeteer API)
   const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams()
   const hideNav = searchParams.get('hideNav') === 'true' || searchParams.get('clean') === '1'
+
+  // STRICT LOGIN ENFORCEMENT: Never allow generator, tool runner, or dashboard without login!
+  if (!session && currentView !== 'landing' && currentView !== 'login') {
+    return (
+      <SingleLoginPage
+        onSuccess={(authData) => handleSaveSession(authData)}
+        onBackToHome={goToLanding}
+      />
+    )
+  }
 
   // 0. DYNAMIC TOOL RUNNER (For any Custom API Tools generated in the panel)
   if (currentView === 'tool_runner' && !hideNav) {
