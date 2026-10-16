@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>Dark SS Maker</title>
     
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    
     <!-- PWA & Mobile Meta Tags -->
     <meta name="theme-color" content="#ffffff" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -22,12 +26,23 @@
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
     <script>
-      // Register sw and clear old caches if needed
+      // Clear legacy caches and register latest SW
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js').then((reg) => {
-            reg.update();
-          }).catch(() => {});
+          navigator.serviceWorker.getRegistrations().then((registrations) => {
+            for (let reg of registrations) {
+              reg.update();
+            }
+          });
+          if ('caches' in window) {
+            caches.keys().then((names) => {
+              for (let name of names) {
+                if (name !== 'dark-ss-v10-fresh') {
+                  caches.delete(name);
+                }
+              }
+            });
+          }
         });
       }
     </script>

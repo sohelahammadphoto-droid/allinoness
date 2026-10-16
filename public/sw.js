@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sky-fake-pay-v3';
+const CACHE_NAME = 'dark-ss-v10-fresh';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
@@ -15,15 +15,8 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Network first for navigation (always load latest page)
-  if (event.request.mode === 'navigate' || event.request.url.includes('/api/')) {
-    event.respondWith(
-      fetch(event.request).catch(() => caches.match(event.request))
-    );
-    return;
-  }
-
+  // Always fetch live from network, never serve stale cache
   event.respondWith(
-    fetch(event.request).catch(() => caches.match(event.request))
+    fetch(event.request, { cache: 'no-store' }).catch(() => caches.match(event.request))
   );
 });
