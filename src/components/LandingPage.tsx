@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { 
   Zap, ArrowRight, ShieldCheck, Clock, Smartphone, Layers, 
-  Sparkles, CheckCircle2, ChevronRight, Lock, ExternalLink, Globe, User
+  Sparkles, CheckCircle2, ChevronRight, Lock, ExternalLink, Globe, User, LogOut
 } from 'lucide-react'
 import { AuthSession, DynamicService } from '../types'
 
@@ -10,9 +10,10 @@ interface LandingPageProps {
   onGoToDashboard: () => void
   onSelectService: (service: DynamicService) => void
   session: AuthSession | null
+  onLogout?: () => void
 }
 
-export default function LandingPage({ onGoToLogin, onGoToDashboard, onSelectService, session }: LandingPageProps) {
+export default function LandingPage({ onGoToLogin, onGoToDashboard, onSelectService, session, onLogout }: LandingPageProps) {
   const [services, setServices] = useState<DynamicService[]>([])
   const [isLoadingServices, setIsLoadingServices] = useState(true)
 
@@ -67,20 +68,33 @@ export default function LandingPage({ onGoToLogin, onGoToDashboard, onSelectServ
           {/* Action Button */}
           <div className="flex items-center gap-2">
             {session ? (
-              <button
-                onClick={onGoToDashboard}
-                className="px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white font-bold text-xs shadow-lg shadow-indigo-500/20 active:scale-95 transition flex items-center gap-1.5 cursor-pointer"
-              >
-                <ShieldCheck className="w-4 h-4" />
-                <span>Go to Dashboard</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={onGoToDashboard}
+                  className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white font-bold text-xs shadow-lg shadow-indigo-500/20 active:scale-95 transition flex items-center gap-1.5 cursor-pointer"
+                >
+                  <ShieldCheck className="w-4 h-4" />
+                  <span>
+                    {session.role === 'superadmin' ? 'Master Control' : session.role === 'client_admin' ? 'Client Admin' : 'User Studio'}
+                  </span>
+                </button>
+                {onLogout && (
+                  <button
+                    onClick={onLogout}
+                    className="p-2 rounded-xl bg-slate-900 hover:bg-rose-950/60 hover:text-rose-400 border border-slate-800 text-slate-400 text-xs font-bold transition flex items-center cursor-pointer"
+                    title="Sign Out"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
             ) : (
               <button
                 onClick={onGoToLogin}
                 className="px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white font-bold text-xs shadow-lg shadow-indigo-500/20 active:scale-95 transition flex items-center gap-1.5 cursor-pointer"
               >
                 <User className="w-4 h-4" />
-                <span>Sign In / Dashboard</span>
+                <span>Sign In / Login</span>
               </button>
             )}
           </div>

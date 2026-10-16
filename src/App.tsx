@@ -149,6 +149,7 @@ export default function App() {
           onGoToDashboard={goToDashboard}
           onSelectService={handleSelectService}
           session={session}
+          onLogout={() => handleSaveSession(null)}
         />
         <PwaInstallModal
           isOpen={isInstallModalOpen}
@@ -168,8 +169,104 @@ export default function App() {
     )
   }
 
-  // 3. DYNAMIC ROLE-BASED DASHBOARD (Super Admin / Client Admin)
+  // 3. DYNAMIC ROLE-BASED DASHBOARD (Super Admin / Client Admin / User)
   if (currentView === 'dashboard' && !hideNav) {
+    // If not logged in, show single login page immediately
+    if (!session) {
+      return (
+        <SingleLoginPage
+          onSuccess={(authData) => handleSaveSession(authData)}
+          onBackToHome={goToLanding}
+        />
+      )
+    }
+
+    // Role: User -> Statement Studio / Generator
+    if (session.role === 'user') {
+      return (
+        <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
+          <header className="sticky top-0 z-40 bg-slate-950/90 backdrop-blur-xl border-b border-slate-800/80 px-4 py-2.5 shadow-sm flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={goToLanding}
+                className="flex items-center gap-1.5 text-xs font-bold text-slate-300 hover:text-white px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 transition cursor-pointer"
+              >
+                <Home className="w-4 h-4 text-indigo-400" />
+                <span>Home</span>
+              </button>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-extrabold text-white">Statement Studio</span>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                  {session.user?.tenant_name || 'User Workspace'}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-slate-400 hidden sm:inline">
+                User: <b className="text-white">{session.user?.full_name || session.user?.username}</b>
+              </span>
+              <button
+                onClick={() => handleSaveSession(null)}
+                className="p-1.5 sm:px-3 sm:py-1.5 rounded-xl bg-slate-900 hover:bg-rose-950/60 hover:text-rose-400 border border-slate-800 text-slate-400 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
+              >
+                <LogOut className="w-4 h-4" />
+                <span className="hidden sm:inline">Sign Out</span>
+              </button>
+            </div>
+          </header>
+
+          <main className="flex-1 flex flex-col items-center p-3 sm:p-6 pb-24">
+            <div className="w-full max-w-4xl space-y-4">
+              <div className="flex flex-wrap items-center justify-between bg-slate-900/60 p-3 rounded-2xl border border-slate-800 gap-2">
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setActiveTemplate('binance')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${activeTemplate === 'binance' ? 'bg-[#f0b90b] text-black shadow-md' : 'text-slate-400 hover:text-white'}`}
+                  >
+                    Binance
+                  </button>
+                  <button
+                    onClick={() => setActiveTemplate('bk')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${activeTemplate === 'bk' ? 'bg-[#e2136e] text-white shadow-md' : 'text-slate-400 hover:text-white'}`}
+                  >
+                    bKash
+                  </button>
+                  <button
+                    onClick={() => setActiveTemplate('ng')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${activeTemplate === 'ng' ? 'bg-[#f7931a] text-white shadow-md' : 'text-slate-400 hover:text-white'}`}
+                  >
+                    Nagad
+                  </button>
+                </div>
+
+                <button
+                  onClick={handleGlobalDownload}
+                  disabled={isDownloading}
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white font-black text-xs shadow-md transition flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Zap className="w-3.5 h-3.5" />
+                  <span>{isDownloading ? 'Rendering...' : '1-Click Download PNG'}</span>
+                </button>
+              </div>
+
+              <div className="flex flex-col lg:flex-row gap-6 items-start justify-center">
+                <div className="w-full lg:w-80 shrink-0">
+                  <DynamicFormPanel templateType={activeTemplate} />
+                </div>
+                <div className="flex-1 flex justify-center w-full overflow-x-auto p-2">
+                  {activeTemplate === 'binance' && <BinanceReceipt />}
+                  {activeTemplate === 'bk' && <BkashReceipt />}
+                  {activeTemplate === 'ng' && <NagadReceipt />}
+                </div>
+              </div>
+            </div>
+          </main>
+        </div>
+      )
+    }
+
+    // Role: superadmin or client_admin
     return (
       <div className="min-h-screen bg-[#070b14] text-slate-100 flex flex-col font-sans">
         {/* Dashboard Top Header */}
@@ -187,14 +284,14 @@ export default function App() {
 
             <div className="flex items-center gap-2">
               <span className="text-sm font-extrabold text-white">
-                {session?.role === 'superadmin' ? 'Master Control Dashboard' : 'Client Admin Dashboard'}
+                {session.role === 'superadmin' ? 'Master Control Dashboard' : 'Client Admin Dashboard'}
               </span>
               <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                session?.role === 'superadmin' 
+                session.role === 'superadmin' 
                   ? 'bg-rose-500/20 text-rose-300 border-rose-500/30'
                   : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
               }`}>
-                {session?.role === 'superadmin' ? 'Super Admin' : 'Client Tenant'}
+                {session.role === 'superadmin' ? 'Super Admin' : 'Client Tenant'}
               </span>
             </div>
           </div>
@@ -202,7 +299,7 @@ export default function App() {
           {/* User profile & Logout */}
           <div className="flex items-center gap-3">
             <span className="text-xs text-slate-400 hidden sm:inline">
-              Logged in as <b className="text-white">{session?.user?.username || session?.tenant?.tenant_code || 'Admin'}</b>
+              Logged in as <b className="text-white">{session.user?.username || session.tenant?.tenant_code || 'Admin'}</b>
             </span>
 
             <button
@@ -218,7 +315,11 @@ export default function App() {
 
         {/* Dashboard Main Content */}
         <main className="flex-1 flex justify-center items-start p-2 sm:p-6 pb-24">
-          <AdminPortal onBackToApp={goToLanding} />
+          <AdminPortal
+            session={session}
+            onLogout={() => handleSaveSession(null)}
+            onBackToApp={goToLanding}
+          />
         </main>
       </div>
     )

@@ -10,26 +10,11 @@ import { AuthSession, TenantInfo, TenantUser, TemplateInfo, DynamicField, Dynami
 
 interface AdminPortalProps {
   onBackToApp?: () => void
+  session: AuthSession
+  onLogout: () => void
 }
 
-export default function AdminPortal({ onBackToApp }: AdminPortalProps) {
-  const [session, setSession] = useState<AuthSession | null>(() => {
-    try {
-      const stored = localStorage.getItem('receipt_app_auth')
-      return stored ? JSON.parse(stored) : null
-    } catch {
-      return null
-    }
-  })
-
-  // Login form state
-  const [username, setUsername] = useState('')
-  const [password, setPassword] = useState('')
-  const [selectedRole, setSelectedRole] = useState<'client_admin' | 'superadmin'>('client_admin')
-  const [loginError, setLoginError] = useState('')
-  const [isLoggingIn, setIsLoggingIn] = useState(false)
-  const [showPassword, setShowPassword] = useState(false)
-
+export default function AdminPortal({ onBackToApp, session, onLogout }: AdminPortalProps) {
   // Client Admin data
   const [subscription, setSubscription] = useState<TenantInfo | null>(null)
   const [users, setUsers] = useState<TenantUser[]>([])
@@ -76,78 +61,6 @@ export default function AdminPortal({ onBackToApp }: AdminPortalProps) {
   const [newFieldPlaceholder, setNewFieldPlaceholder] = useState('')
   const [newFieldOptions, setNewFieldOptions] = useState('')
   const [newFieldSection, setNewFieldSection] = useState<'general' | 'message2'>('general')
-
-  // Save session
-  const saveSession = (newSession: AuthSession | null) => {
-    setSession(newSession)
-    if (newSession) {
-      localStorage.setItem('receipt_app_auth', JSON.stringify(newSession))
-    } else {
-      localStorage.removeItem('receipt_app_auth')
-    }
-  }
-
-  // Handle Login
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoginError('')
-    setIsLoggingIn(true)
-
-    try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username: username.trim(),
-          password: password.trim(),
-          role: selectedRole
-        })
-      })
-
-      const data = await res.json() as any
-      if (!res.ok) {
-        throw new Error(data.error || 'Login failed')
-      }
-
-      saveSession(data)
-    } catch (err: any) {
-      setLoginError(err.message)
-    } finally {
-      setIsLoggingIn(false)
-    }
-  }
-
-  // Quick Preset Login
-  const quickLogin = async (role: 'client_admin' | 'superadmin') => {
-    const creds = role === 'superadmin' 
-      ? { user: 'Sohelahammad5853', pass: 'Sr25800852*#' }
-      : { user: 'client_demo', pass: 'client123456' }
-    
-    setUsername(creds.user)
-    setPassword(creds.pass)
-    setSelectedRole(role)
-
-    setIsLoggingIn(true)
-    setLoginError('')
-    try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username: creds.user,
-          password: creds.pass,
-          role
-        })
-      })
-      const data = await res.json() as any
-      if (!res.ok) throw new Error(data.error || 'Login failed')
-      saveSession(data)
-    } catch (err: any) {
-      setLoginError(err.message)
-    } finally {
-      setIsLoggingIn(false)
-    }
-  }
 
   // Fetch Client Admin Data
   const fetchClientAdminData = async () => {
@@ -458,128 +371,14 @@ export default function AdminPortal({ onBackToApp }: AdminPortalProps) {
   // RENDER: Not Logged In
   if (!session) {
     return (
-      <div className="w-full max-w-md mx-auto p-4 sm:p-6 pb-24">
-        {/* Header */}
-        <div className="text-center mb-6">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-amber-500 to-rose-500 mx-auto flex items-center justify-center shadow-lg shadow-amber-500/20 mb-3">
-            <Lock className="w-8 h-8 text-black" />
-          </div>
-          <h2 className="text-2xl font-bold text-white tracking-tight">Admin & Client Portal</h2>
-          <p className="text-xs text-slate-400 mt-1">
-            Access subscription countdown, user controls & dynamic services
-          </p>
-        </div>
-
-        {/* Role Selector */}
-        <div className="flex bg-slate-900 p-1 rounded-xl border border-slate-800 mb-5">
-          <button
-            type="button"
-            onClick={() => setSelectedRole('client_admin')}
-            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
-              selectedRole === 'client_admin'
-                ? 'bg-amber-500 text-black shadow-md'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <Building2 className="w-3.5 h-3.5" />
-            <span>Client Admin</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setSelectedRole('superadmin')}
-            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
-              selectedRole === 'superadmin'
-                ? 'bg-rose-500 text-white shadow-md'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <ShieldCheck className="w-3.5 h-3.5" />
-            <span>Super Administrator</span>
-          </button>
-        </div>
-
-        {/* Login Form */}
-        <form onSubmit={handleLogin} className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-2xl backdrop-blur-xl space-y-4">
-          {loginError && (
-            <div className="p-3 rounded-xl bg-rose-950/60 border border-rose-500/50 text-rose-300 text-xs font-medium flex items-center gap-2">
-              <XCircle className="w-4 h-4 shrink-0 text-rose-400" />
-              <span>{loginError}</span>
-            </div>
-          )}
-
-          <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-              {selectedRole === 'superadmin' ? 'Admin Username' : 'Tenant Code / Username'}
-            </label>
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder={selectedRole === 'superadmin' ? 'Sohelahammad5853' : 'client_demo'}
-              required
-              className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 transition"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">Password</label>
-            <div className="relative">
-              <input
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter password"
-                required
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 transition pr-10"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
-              >
-                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            disabled={isLoggingIn}
-            className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black font-bold text-sm shadow-lg shadow-amber-500/20 active:scale-[0.98] transition cursor-pointer flex items-center justify-center gap-2"
-          >
-            {isLoggingIn ? (
-              <RefreshCw className="w-4 h-4 animate-spin" />
-            ) : (
-              <>
-                <Key className="w-4 h-4" />
-                <span>Log In to Dashboard</span>
-              </>
-            )}
-          </button>
-        </form>
-
-        {/* Demo Fast Logins for Testing */}
-        <div className="mt-5 space-y-2">
-          <p className="text-[11px] text-center text-slate-500 font-semibold uppercase tracking-wider">
-            Quick 1-Click Demo Login
-          </p>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              onClick={() => quickLogin('client_admin')}
-              className="py-2.5 px-3 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-700 text-slate-200 text-xs font-semibold transition active:scale-95 flex items-center justify-center gap-1.5"
-            >
-              <span>🏢</span>
-              <span>Client Admin</span>
-            </button>
-            <button
-              onClick={() => quickLogin('superadmin')}
-              className="py-2.5 px-3 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-700 text-slate-200 text-xs font-semibold transition active:scale-95 flex items-center justify-center gap-1.5"
-            >
-              <span>👑</span>
-              <span>Super Admin</span>
-            </button>
-          </div>
-        </div>
+      <div className="py-16 text-center text-slate-400">
+        <p className="text-sm mb-3">Please sign in to access the dashboard.</p>
+        <button
+          onClick={onLogout}
+          className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs"
+        >
+          Go to Sign In
+        </button>
       </div>
     )
   }
@@ -590,30 +389,32 @@ export default function AdminPortal({ onBackToApp }: AdminPortalProps) {
 
     return (
       <div className="w-full max-w-2xl mx-auto p-4 sm:p-6 pb-28 space-y-5">
-        {/* Top Header */}
-        <div className="flex items-center justify-between bg-slate-900/90 border border-slate-800 rounded-2xl p-4 shadow-lg backdrop-blur-md">
+        {/* Tenant Profile Banner */}
+        <div className="flex items-center justify-between bg-slate-900/80 border border-slate-800 rounded-2xl p-4 shadow-lg backdrop-blur-md">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center font-black text-lg">
+            <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center font-black text-base">
               {currentTenant?.name?.charAt(0) || 'A'}
             </div>
             <div>
-              <h2 className="text-base font-bold text-white flex items-center gap-1.5">
+              <h2 className="text-sm sm:text-base font-bold text-white flex items-center gap-1.5">
                 <span>{currentTenant?.name || 'Client Admin'}</span>
                 <span className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1.5 py-0.5 rounded-full font-mono">
                   {currentTenant?.tenant_code}
                 </span>
               </h2>
-              <span className="text-xs text-slate-400">Monthly License Portal</span>
+              <span className="text-[11px] text-slate-400">Organization Monthly License Portal</span>
             </div>
           </div>
 
-          <button
-            onClick={() => saveSession(null)}
-            className="p-2.5 rounded-xl bg-slate-800 hover:bg-rose-950/60 hover:text-rose-400 text-slate-400 transition"
-            title="Log Out"
-          >
-            <LogOut className="w-4 h-4" />
-          </button>
+          <div className="flex items-center gap-2">
+            <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border ${
+              currentTenant?.status === 'expired'
+                ? 'bg-rose-500/20 text-rose-400 border-rose-500/30'
+                : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+            }`}>
+              {currentTenant?.status === 'expired' ? 'Expired' : 'Active License'}
+            </span>
+          </div>
         </div>
 
         {/* 1. Prominent Live Countdown Timer */}
@@ -822,30 +623,31 @@ export default function AdminPortal({ onBackToApp }: AdminPortalProps) {
   // RENDER: SUPER ADMINISTRATOR PANEL
   return (
     <div className="w-full max-w-4xl mx-auto p-4 sm:p-6 pb-28 space-y-6">
-      {/* Super Admin Top Header */}
-      <div className="flex items-center justify-between bg-slate-900/90 border border-rose-500/30 rounded-2xl p-4 shadow-lg backdrop-blur-md">
+      {/* Super Admin Status Banner */}
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-900/80 border border-slate-800 rounded-2xl p-4 shadow-lg backdrop-blur-md">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-rose-600 to-amber-500 text-white flex items-center justify-center font-black text-xl shadow-md">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-rose-600 to-amber-500 text-white flex items-center justify-center font-black text-lg shadow-md shadow-rose-600/20">
             👑
           </div>
           <div>
-            <h2 className="text-base font-bold text-white flex items-center gap-2">
-              <span>Super Administrator</span>
+            <h2 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+              <span>Super Administrator Master Control</span>
               <span className="text-[10px] bg-rose-500/20 text-rose-300 border border-rose-500/30 px-2 py-0.5 rounded-full font-bold">
-                MASTER
+                FULL ACCESS
               </span>
             </h2>
-            <span className="text-xs text-slate-400">Dynamic Services & Monthly Licensing Studio</span>
+            <span className="text-[11px] text-slate-400">
+              Manage Dynamic Services (APIs), Client Admins (+30 Days), and Parameter Engine
+            </span>
           </div>
         </div>
 
-        <button
-          onClick={() => saveSession(null)}
-          className="p-2.5 rounded-xl bg-slate-800 hover:bg-rose-950/60 hover:text-rose-400 text-slate-400 transition"
-          title="Log Out"
-        >
-          <LogOut className="w-4 h-4" />
-        </button>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-emerald-400 font-semibold flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            Cloudflare D1 Live
+          </span>
+        </div>
       </div>
 
       {/* 3-Mode Switcher */}
