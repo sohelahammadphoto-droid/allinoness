@@ -24,7 +24,19 @@ function getInitialView(): AppView {
   if (toolName) return 'tool_runner'
   if (view === 'login') return 'login'
   if (view === 'dashboard') return 'dashboard'
+  if (view === 'landing') return 'landing'
   if (searchParams.has('type')) return 'generator'
+
+  // If user has a saved session in localStorage, stay in dashboard on refresh!
+  try {
+    const stored = localStorage.getItem('receipt_app_auth')
+    if (stored) {
+      const parsed = JSON.parse(stored)
+      if (parsed && (parsed.token || parsed.user || parsed.role)) {
+        return 'dashboard'
+      }
+    }
+  } catch {}
 
   return 'landing'
 }
@@ -48,15 +60,24 @@ export default function App() {
     }
   })
 
-  // Sync session changes to localStorage
+  // Sync session changes to localStorage and update browser URL
   const handleSaveSession = (newSession: AuthSession | null) => {
     setSession(newSession)
     if (newSession) {
       localStorage.setItem('receipt_app_auth', JSON.stringify(newSession))
       setCurrentView('dashboard')
+      const url = new URL(window.location.href)
+      url.searchParams.set('view', 'dashboard')
+      window.history.pushState({}, '', url.toString())
     } else {
       localStorage.removeItem('receipt_app_auth')
       setCurrentView('landing')
+      const url = new URL(window.location.href)
+      url.searchParams.delete('view')
+      url.searchParams.delete('name')
+      url.searchParams.delete('tool')
+      url.searchParams.delete('type')
+      window.history.pushState({}, '', url.toString())
     }
   }
 
@@ -74,7 +95,7 @@ export default function App() {
     setCurrentView('landing')
     setActiveToolSlug('')
     const url = new URL(window.location.href)
-    url.searchParams.delete('view')
+    url.searchParams.set('view', 'landing')
     url.searchParams.delete('type')
     url.searchParams.delete('name')
     url.searchParams.delete('tool')
