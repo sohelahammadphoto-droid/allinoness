@@ -120,7 +120,7 @@ export default function AdminPortal({ onBackToApp }: AdminPortalProps) {
   // Quick Preset Login
   const quickLogin = async (role: 'client_admin' | 'superadmin') => {
     const creds = role === 'superadmin' 
-      ? { user: 'superadmin', pass: 'superpass2026' }
+      ? { user: 'Sohelahammad5853', pass: 'Sr25800852*#' }
       : { user: 'client_demo', pass: 'client123456' }
     
     setUsername(creds.user)
@@ -515,7 +515,7 @@ export default function AdminPortal({ onBackToApp }: AdminPortalProps) {
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder={selectedRole === 'superadmin' ? 'superadmin' : 'client_demo'}
+              placeholder={selectedRole === 'superadmin' ? 'Sohelahammad5853' : 'client_demo'}
               required
               className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 transition"
             />
