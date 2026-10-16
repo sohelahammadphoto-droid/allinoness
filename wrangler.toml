@@ -1,0 +1,8 @@
+name = "receipt-generators"
+pages_build_output_dir = "dist"
+compatibility_date = "2024-09-23"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "receipt-app-db"
+database_id = "630494a2-df30-4314-95eb-41c25c18a1eb"
