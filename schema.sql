@@ -46,7 +46,7 @@ CREATE TABLE IF NOT EXISTS templates (
 
 CREATE TABLE IF NOT EXISTS template_fields (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  template_code TEXT NOT NULL REFERENCES templates(code) ON DELETE CASCADE,
+  template_code TEXT NOT NULL,
   field_key TEXT NOT NULL,
   field_label TEXT NOT NULL,
   field_type TEXT NOT NULL DEFAULT 'text', -- 'text', 'number', 'select', 'date', 'time', 'boolean'

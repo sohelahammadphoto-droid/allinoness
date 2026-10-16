@@ -126,6 +126,7 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
       return new Response(JSON.stringify({ error: 'Missing tenant id' }), { status: 400 });
     }
 
+    await db.prepare('DELETE FROM users WHERE tenant_id = ?').bind(id).run();
     await db.prepare('DELETE FROM tenants WHERE id = ?').bind(id).run();
     return new Response(JSON.stringify({ success: true, message: 'Tenant deleted successfully' }), {
       headers: { 'Content-Type': 'application/json' },

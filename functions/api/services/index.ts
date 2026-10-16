@@ -148,6 +148,29 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       ).run();
     }
 
+    // Keep templates table in sync with custom dynamic tool
+    try {
+      await db.prepare(`
+        INSERT INTO templates (code, name, icon, color, is_active, sort_order)
+        VALUES (?, ?, ?, ?, ?, ?)
+        ON CONFLICT(code) DO UPDATE SET
+          name = excluded.name,
+          icon = excluded.icon,
+          color = excluded.color,
+          is_active = excluded.is_active,
+          sort_order = excluded.sort_order
+      `).bind(
+        cleanKey,
+        name.trim(),
+        icon_val || caption || '⚡',
+        bg_color || '#4f46e5',
+        is_active !== undefined ? (is_active ? 1 : 0) : 1,
+        sort_order || 1
+      ).run();
+    } catch (tplErr) {
+      console.warn('Templates sync note:', tplErr);
+    }
+
     // Sync parameters if provided
     if (Array.isArray(parameters)) {
       // Clear previous fields for this service/template
@@ -198,7 +221,13 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
       return new Response(JSON.stringify({ error: 'Missing service id' }), { status: 400 });
     }
 
+    const srv = await db.prepare('SELECT service_key FROM services WHERE id = ?').bind(id).first() as any;
+    if (srv && srv.service_key) {
+      await db.prepare('DELETE FROM template_fields WHERE template_code = ?').bind(srv.service_key).run();
+      await db.prepare('DELETE FROM templates WHERE code = ?').bind(srv.service_key).run();
+    }
     await db.prepare('DELETE FROM services WHERE id = ?').bind(id).run();
+
     return new Response(JSON.stringify({ success: true, message: 'Service deleted successfully' }), {
       headers: { 'Content-Type': 'application/json' },
     });
