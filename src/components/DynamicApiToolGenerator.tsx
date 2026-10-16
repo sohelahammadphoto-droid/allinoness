@@ -96,7 +96,7 @@ export default function DynamicApiToolGenerator({
     }
   }
 
-  // Auto-extract query parameters if user pastes full URL with parameters (e.g. ?type=ng&amount=5,000.00&...)
+  // Auto-extract query parameters if user pastes full URL with parameters (e.g. ?type=binance&usd=100&name=Tonmoykhan&number=1007670536)
   const autoExtractParametersFromUrl = (urlToParse?: string) => {
     const raw = (urlToParse || targetApiUrl || '').trim()
     if (!raw.includes('?')) return
@@ -106,15 +106,50 @@ export default function DynamicApiToolGenerator({
       
       const searchParams = new URLSearchParams(queryString)
       const newParams: ApiParameter[] = []
+      const fixedParams = new URLSearchParams()
 
       searchParams.forEach((val, key) => {
+        const lowerKey = key.trim().toLowerCase()
+        
+        // FIXED ENDPOINT PARAMETERS: Keep directly in Target API URL (NOT in user form)
+        if (lowerKey === 'type') {
+          fixedParams.set(key.trim(), val.trim())
+          // Auto-set title and slug if empty
+          if (!toolTitle && val.toLowerCase() === 'binance') {
+            setToolTitle('Binance Pay Send')
+            setToolSlug('binance-send')
+            setButtonName('Binance Receipt')
+          }
+          return
+        }
+
         let label = key
-        if (key.toLowerCase() === 'trxid') label = 'Transaction ID'
-        else if (key.toLowerCase() === 'sender') label = 'Sender Phone'
-        else if (key.toLowerCase() === 'recipient' || key.toLowerCase() === 'receiver') label = 'Recipient Phone'
-        else if (key.toLowerCase() === 'amount') label = 'Amount (TK)'
-        else if (key.toLowerCase() === 'type') label = 'Receipt Type'
-        else {
+        let fieldType: 'text' | 'number' | 'date' | 'time' | 'select' = 'text'
+
+        if (lowerKey === 'usd') {
+          label = 'USD Amount ($)'
+          fieldType = 'number'
+        } else if (lowerKey === 'name') {
+          label = 'Receiver Name (নাম)'
+        } else if (lowerKey === 'number') {
+          label = 'Binance ID / Number (আইডি বা নাম্বার)'
+          fieldType = 'text'
+        } else if (lowerKey === 'trxid') {
+          label = 'Transaction ID'
+        } else if (lowerKey === 'sender') {
+          label = 'Sender Phone (প্রেরক)'
+        } else if (lowerKey === 'recipient' || lowerKey === 'receiver') {
+          label = 'Recipient Phone (প্রাপক)'
+        } else if (lowerKey === 'amount') {
+          label = 'Amount (পরিমাণ)'
+          fieldType = 'number'
+        } else if (lowerKey === 'ref' || lowerKey === 'reference') {
+          label = 'Reference'
+        } else if (lowerKey === 'fee') {
+          label = 'Fee (চার্জ)'
+        } else if (lowerKey === 'balance') {
+          label = 'Balance (ব্যালেন্স)'
+        } else {
           label = key
             .replace(/([A-Z])/g, ' $1')
             .replace(/[_-]/g, ' ')
@@ -126,14 +161,19 @@ export default function DynamicApiToolGenerator({
           id: Date.now().toString() + Math.random().toString(36).substr(2, 4),
           field_key: key.trim(),
           field_label: label,
-          field_type: 'text',
-          placeholder: val ? `উদাহরণ: ${val}` : `Enter ${label}`,
+          field_type: fieldType,
+          placeholder: val ? val : `Enter ${label}`,
           is_required: true,
         })
       })
 
+      // Preserve fixed query parameters in targetApiUrl (e.g. ?type=binance)
+      const finalBase = fixedParams.toString() 
+        ? `${base.trim()}?${fixedParams.toString()}` 
+        : base.trim()
+
+      setTargetApiUrl(finalBase)
       if (newParams.length > 0) {
-        setTargetApiUrl(base.trim())
         setParameters(newParams)
       }
     } catch (e) {

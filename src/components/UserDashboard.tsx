@@ -269,40 +269,40 @@ export default function UserDashboard({ session, onSignOut, onGoToHome }: UserDa
         }
       })
 
-      // Auto-set current Bangladesh time for status bar (time & clock)
-      const currentBdTime = getCurrentBdTime()
-      urlObj.searchParams.set('time', formValues['time'] || currentBdTime)
-      urlObj.searchParams.set('clock', formValues['time'] || currentBdTime)
+      // For bKash / Nagad statement receipts: auto-handle status bar time & 2nd message count
+      if (isNgOrBk) {
+        const currentBdTime = getCurrentBdTime()
+        urlObj.searchParams.set('time', formValues['time'] || currentBdTime)
+        urlObj.searchParams.set('clock', formValues['time'] || currentBdTime)
 
-      // Ensure Date & Time has current date & time if left blank
-      if (!formValues['date']) {
-        urlObj.searchParams.set('date', getCurrentBdDateTime())
-      }
-
-      // If 2nd message is toggled ON, attach 2nd message params & count=2
-      if (isNgOrBk && showSecondMsg) {
-        urlObj.searchParams.set('count', '2')
-        urlObj.searchParams.set('msgCount', '2')
-        Object.entries(secondMsgValues).forEach(([k, v]) => {
-          if (v !== undefined && v !== null && v !== '') {
-            urlObj.searchParams.set(k, v)
-          }
-        })
-        if (secondMsgValues['time2']) {
-          urlObj.searchParams.set('clock2', secondMsgValues['time2'])
+        if (!formValues['date']) {
+          urlObj.searchParams.set('date', getCurrentBdDateTime())
         }
-      } else {
-        urlObj.searchParams.set('count', '1')
-        urlObj.searchParams.delete('msgCount')
-        urlObj.searchParams.delete('amount2')
-        urlObj.searchParams.delete('sender2')
-        urlObj.searchParams.delete('trxId2')
-        urlObj.searchParams.delete('ref2')
-        urlObj.searchParams.delete('balance2')
-        urlObj.searchParams.delete('fee2')
-        urlObj.searchParams.delete('time2')
-        urlObj.searchParams.delete('clock2')
-        urlObj.searchParams.delete('date2')
+
+        if (showSecondMsg) {
+          urlObj.searchParams.set('count', '2')
+          urlObj.searchParams.set('msgCount', '2')
+          Object.entries(secondMsgValues).forEach(([k, v]) => {
+            if (v !== undefined && v !== null && v !== '') {
+              urlObj.searchParams.set(k, v)
+            }
+          })
+          if (secondMsgValues['time2']) {
+            urlObj.searchParams.set('clock2', secondMsgValues['time2'])
+          }
+        } else {
+          urlObj.searchParams.set('count', '1')
+          urlObj.searchParams.delete('msgCount')
+          urlObj.searchParams.delete('amount2')
+          urlObj.searchParams.delete('sender2')
+          urlObj.searchParams.delete('trxId2')
+          urlObj.searchParams.delete('ref2')
+          urlObj.searchParams.delete('balance2')
+          urlObj.searchParams.delete('fee2')
+          urlObj.searchParams.delete('time2')
+          urlObj.searchParams.delete('clock2')
+          urlObj.searchParams.delete('date2')
+        }
       }
 
       const finalUrl = urlObj.toString()
