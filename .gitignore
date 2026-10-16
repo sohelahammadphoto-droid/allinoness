@@ -5,6 +5,9 @@ node_modules/
 # Production build output
 dist/
 dist-ssr/
+# Environment & Secrets
+.env
+.env.*
 *.local
 
 # Logs
