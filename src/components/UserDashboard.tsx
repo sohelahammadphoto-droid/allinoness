@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { 
   Home, LogOut, Zap, Download, RefreshCw, AlertTriangle, 
   CheckCircle, Sparkles, ArrowLeft, ArrowRight, Grid,
-  Image as ImageIcon, CheckCircle2, ChevronRight
+  Image as ImageIcon, MessageSquare, Plus, Trash2, ChevronRight
 } from 'lucide-react'
 import { AuthSession, DynamicService } from '../types'
 import { ApiParameter } from './DynamicApiToolGenerator'
@@ -21,6 +21,10 @@ export default function UserDashboard({ session, onSignOut, onGoToHome }: UserDa
   const [fields, setFields] = useState<ApiParameter[]>([])
   const [formValues, setFormValues] = useState<Record<string, string>>({})
   
+  // 2nd Message Toggle and Values (for Nagad & bKash)
+  const [showSecondMsg, setShowSecondMsg] = useState(false)
+  const [secondMsgValues, setSecondMsgValues] = useState<Record<string, string>>({})
+
   const [isLoadingTools, setIsLoadingTools] = useState(true)
   const [isLoadingFields, setIsLoadingFields] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
@@ -55,6 +59,8 @@ export default function UserDashboard({ session, onSignOut, onGoToHome }: UserDa
       setSelectedTool(null)
       setFields([])
       setFormValues({})
+      setSecondMsgValues({})
+      setShowSecondMsg(false)
       setGeneratedImageUrl(null)
       setErrorMessage('')
       return
@@ -64,6 +70,8 @@ export default function UserDashboard({ session, onSignOut, onGoToHome }: UserDa
       setIsLoadingFields(true)
       setErrorMessage('')
       setGeneratedImageUrl(null)
+      setShowSecondMsg(false)
+      setSecondMsgValues({})
       try {
         const res = await fetch(`/api/services?key=${encodeURIComponent(selectedToolKey)}`)
         const data = await res.json() as any
@@ -101,6 +109,21 @@ export default function UserDashboard({ session, onSignOut, onGoToHome }: UserDa
     setFormValues((prev) => ({ ...prev, [key]: val }))
   }
 
+  const handleSecondMsgChange = (key: string, val: string) => {
+    setSecondMsgValues((prev) => ({ ...prev, [key]: val }))
+  }
+
+  // Detect whether current tool is Nagad or bKash
+  const isNg = Boolean(
+    selectedToolKey?.toLowerCase().includes('nagad') || 
+    selectedToolKey?.toLowerCase().includes('ng')
+  )
+  const isBk = Boolean(
+    selectedToolKey?.toLowerCase().includes('bkash') || 
+    selectedToolKey?.toLowerCase().includes('bk')
+  )
+  const isNgOrBk = isNg || isBk
+
   // 3. Generate screenshot by calling the connected API
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -117,11 +140,42 @@ export default function UserDashboard({ session, onSignOut, onGoToHome }: UserDa
 
       // Safely parse URL and apply form parameters
       const urlObj = new URL(targetUrl, window.location.origin)
+
+      // Auto-set type for ng/bk
+      if (isNg) {
+        urlObj.searchParams.set('type', 'ng')
+      } else if (isBk) {
+        urlObj.searchParams.set('type', 'bk')
+      }
+
+      // Apply 1st message parameters
       Object.entries(formValues).forEach(([k, v]) => {
         if (v !== undefined && v !== null && v !== '') {
           urlObj.searchParams.set(k, v)
         }
       })
+
+      // If 2nd message is toggled ON, attach 2nd message params & count=2
+      if (isNgOrBk && showSecondMsg) {
+        urlObj.searchParams.set('count', '2')
+        urlObj.searchParams.set('msgCount', '2')
+        Object.entries(secondMsgValues).forEach(([k, v]) => {
+          if (v !== undefined && v !== null && v !== '') {
+            urlObj.searchParams.set(k, v)
+          }
+        })
+      } else {
+        urlObj.searchParams.set('count', '1')
+        urlObj.searchParams.delete('msgCount')
+        urlObj.searchParams.delete('amount2')
+        urlObj.searchParams.delete('sender2')
+        urlObj.searchParams.delete('trxId2')
+        urlObj.searchParams.delete('ref2')
+        urlObj.searchParams.delete('balance2')
+        urlObj.searchParams.delete('fee2')
+        urlObj.searchParams.delete('date2')
+      }
+
       const finalUrl = urlObj.toString()
 
       // Fetch via backend proxy to bypass browser CORS restrictions
@@ -335,46 +389,203 @@ export default function UserDashboard({ session, onSignOut, onGoToHome }: UserDa
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
                 {/* Left Column: Input Form (Strictly Blank Initially) */}
                 <div className="lg:col-span-5 bg-[#0b101e] border border-slate-800/90 rounded-2xl p-4 sm:p-6 shadow-xl space-y-5">
-                  <div className="pb-3 border-b border-slate-800">
-                    <h2 className="text-base font-extrabold text-white flex items-center gap-2">
-                      <span>{selectedTool.icon_val || '🚀'}</span>
-                      <span>{selectedTool.name}</span>
-                    </h2>
-                    <p className="text-[11px] text-slate-400 mt-0.5">
-                      {selectedTool.subtitle || 'সবগুলো ফিল্ড সঠিকভাবে পূরণ করুন'}
-                    </p>
+                  <div className="pb-3 border-b border-slate-800 flex items-center justify-between">
+                    <div>
+                      <h2 className="text-base font-extrabold text-white flex items-center gap-2">
+                        <span>{selectedTool.icon_val || '🚀'}</span>
+                        <span>{selectedTool.name}</span>
+                      </h2>
+                      <p className="text-[11px] text-slate-400 mt-0.5">
+                        {selectedTool.subtitle || 'সবগুলো ফিল্ড সঠিকভাবে পূরণ করুন'}
+                      </p>
+                    </div>
                   </div>
 
+                  {/* 2nd Message Toggle Button for Nagad & bKash */}
+                  {isNgOrBk && (
+                    <div className="flex items-center justify-between p-3 rounded-xl bg-slate-900/90 border border-indigo-900/50">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-lg bg-indigo-950/80 border border-indigo-800/40 flex items-center justify-center text-indigo-400">
+                          <MessageSquare className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-white">Need 2nd Message?</p>
+                          <p className="text-[10px] text-slate-400">২টি মেসেজ একসাথে তৈরি করতে চান?</p>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => setShowSecondMsg(!showSecondMsg)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                          showSecondMsg
+                            ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md'
+                            : 'bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/40'
+                        }`}
+                      >
+                        {showSecondMsg ? (
+                          <>
+                            <CheckCircle className="w-3.5 h-3.5" />
+                            <span>Showing 2 Msgs</span>
+                          </>
+                        ) : (
+                          <>
+                            <Plus className="w-3.5 h-3.5" />
+                            <span>+ Need 2nd Msg</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )}
+
                   <form onSubmit={handleGenerate} className="space-y-4">
+                    {/* Message 1 Header */}
+                    {isNgOrBk && showSecondMsg && (
+                      <div className="flex items-center gap-2 pb-1 border-b border-slate-800 text-xs font-extrabold text-indigo-400 uppercase tracking-wider">
+                        <span>💬 1st Message Details (১ম মেসেজ)</span>
+                      </div>
+                    )}
+
+                    {/* Message 1 Dynamic Fields */}
                     {fields.length === 0 ? (
                       <div className="p-4 rounded-xl bg-slate-900/40 border border-slate-800 text-center text-xs text-slate-400">
                         এই টুলে অতিরিক্ত কোনো ইনপুট নেই। সরাসরি নিচের বাটন চাপুন।
                       </div>
                     ) : (
-                      fields.map((field) => (
-                        <div key={field.field_key} className="space-y-1.5">
+                      fields
+                        .filter(f => f.field_key !== 'type') // Exclude redundant type field as it's auto-managed
+                        .map((field) => (
+                          <div key={field.field_key} className="space-y-1.5">
+                            <label className="block text-xs font-bold text-slate-300">
+                              {field.field_label || field.field_key}
+                              {field.is_required && <span className="text-rose-400 ml-1">*</span>}
+                            </label>
+                            <input
+                              type={
+                                field.field_type === 'number'
+                                  ? 'number'
+                                  : field.field_type === 'date'
+                                  ? 'date'
+                                  : field.field_type === 'time'
+                                  ? 'time'
+                                  : 'text'
+                              }
+                              value={formValues[field.field_key] || ''}
+                              onChange={(e) => handleInputChange(field.field_key, e.target.value)}
+                              placeholder={field.placeholder || `Enter ${field.field_label || field.field_key}`}
+                              required={field.is_required}
+                              className="w-full bg-[#070b14] border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition"
+                            />
+                          </div>
+                        ))
+                    )}
+
+                    {/* Message 2 Dynamic Fields (Visible only when showSecondMsg is true) */}
+                    {isNgOrBk && showSecondMsg && (
+                      <div className="space-y-4 pt-4 border-t border-dashed border-indigo-900/60 animate-fadeIn">
+                        <div className="flex items-center justify-between pb-1 border-b border-slate-800">
+                          <h3 className="text-xs font-extrabold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                            <span>📩 2nd Message Details (২য় মেসেজ)</span>
+                          </h3>
+                          <button
+                            type="button"
+                            onClick={() => setShowSecondMsg(false)}
+                            className="text-[10px] text-rose-400 hover:text-rose-300 font-bold cursor-pointer"
+                          >
+                            Remove
+                          </button>
+                        </div>
+
+                        {/* 2nd Amount */}
+                        <div className="space-y-1.5">
                           <label className="block text-xs font-bold text-slate-300">
-                            {field.field_label || field.field_key}
-                            {field.is_required && <span className="text-rose-400 ml-1">*</span>}
+                            2nd Amount (৳) <span className="text-rose-400">*</span>
                           </label>
                           <input
-                            type={
-                              field.field_type === 'number'
-                                ? 'number'
-                                : field.field_type === 'date'
-                                ? 'date'
-                                : field.field_type === 'time'
-                                ? 'time'
-                                : 'text'
-                            }
-                            value={formValues[field.field_key] || ''}
-                            onChange={(e) => handleInputChange(field.field_key, e.target.value)}
-                            placeholder={field.placeholder || `Enter ${field.field_label || field.field_key}`}
-                            required={field.is_required}
-                            className="w-full bg-[#070b14] border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition"
+                            type="text"
+                            value={secondMsgValues['amount2'] || ''}
+                            onChange={(e) => handleSecondMsgChange('amount2', e.target.value)}
+                            placeholder="e.g. 2,000.00"
+                            required={showSecondMsg}
+                            className="w-full bg-[#070b14] border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition"
                           />
                         </div>
-                      ))
+
+                        {/* 2nd Sender */}
+                        <div className="space-y-1.5">
+                          <label className="block text-xs font-bold text-slate-300">
+                            2nd Sender Mobile Number <span className="text-rose-400">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={secondMsgValues['sender2'] || ''}
+                            onChange={(e) => handleSecondMsgChange('sender2', e.target.value)}
+                            placeholder="e.g. 01718727784"
+                            required={showSecondMsg}
+                            className="w-full bg-[#070b14] border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition"
+                          />
+                        </div>
+
+                        {/* 2nd TrxID */}
+                        <div className="space-y-1.5">
+                          <label className="block text-xs font-bold text-slate-300">
+                            2nd Transaction ID (TrxID) <span className="text-rose-400">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={secondMsgValues['trxId2'] || ''}
+                            onChange={(e) => handleSecondMsgChange('trxId2', e.target.value)}
+                            placeholder="e.g. 86K2MNPQ"
+                            required={showSecondMsg}
+                            className="w-full bg-[#070b14] border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition"
+                          />
+                        </div>
+
+                        {/* 2nd Ref & Balance Grid */}
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1.5">
+                            <label className="block text-xs font-bold text-slate-300">
+                              2nd Ref
+                            </label>
+                            <input
+                              type="text"
+                              value={secondMsgValues['ref2'] || ''}
+                              onChange={(e) => handleSecondMsgChange('ref2', e.target.value)}
+                              placeholder="e.g. N/A"
+                              className="w-full bg-[#070b14] border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition"
+                            />
+                          </div>
+
+                          <div className="space-y-1.5">
+                            <label className="block text-xs font-bold text-slate-300">
+                              2nd Balance (৳)
+                            </label>
+                            <input
+                              type="text"
+                              value={secondMsgValues['balance2'] || ''}
+                              onChange={(e) => handleSecondMsgChange('balance2', e.target.value)}
+                              placeholder="e.g. 7,026.59"
+                              className="w-full bg-[#070b14] border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition"
+                            />
+                          </div>
+                        </div>
+
+                        {/* If bKash: 2nd Fee */}
+                        {isBk && (
+                          <div className="space-y-1.5">
+                            <label className="block text-xs font-bold text-slate-300">
+                              2nd Fee (৳)
+                            </label>
+                            <input
+                              type="text"
+                              value={secondMsgValues['fee2'] || ''}
+                              onChange={(e) => handleSecondMsgChange('fee2', e.target.value)}
+                              placeholder="e.g. 0.00"
+                              className="w-full bg-[#070b14] border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition"
+                            />
+                          </div>
+                        )}
+                      </div>
                     )}
 
                     {errorMessage && (
@@ -397,7 +608,11 @@ export default function UserDashboard({ session, onSignOut, onGoToHome }: UserDa
                       ) : (
                         <>
                           <Zap className="w-4 h-4 text-amber-300" />
-                          <span>{selectedTool.subtitle || 'Generate Screenshot'}</span>
+                          <span>
+                            {showSecondMsg
+                              ? 'Generate 2-Message Screenshot'
+                              : (selectedTool.subtitle || 'Generate Screenshot')}
+                          </span>
                         </>
                       )}
                     </button>
@@ -412,7 +627,9 @@ export default function UserDashboard({ session, onSignOut, onGoToHome }: UserDa
                       <div className="flex items-center justify-between gap-2 bg-emerald-950/40 border border-emerald-800/50 p-2.5 rounded-xl">
                         <span className="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
                           <CheckCircle className="w-4 h-4" />
-                          <span>স্ক্রিনশট সফলভাবে জেনারেট হয়েছে</span>
+                          <span>
+                            {showSecondMsg ? '২-মেসেজ স্ক্রিনশট সফলভাবে তৈরি হয়েছে' : 'স্ক্রিনশট সফলভাবে জেনারেট হয়েছে'}
+                          </span>
                         </span>
                         <button
                           onClick={handleDownload}
@@ -448,7 +665,7 @@ export default function UserDashboard({ session, onSignOut, onGoToHome }: UserDa
                       </div>
                       <h3 className="text-sm font-bold text-white">লাইভ স্ক্রিনশট আউটপউট</h3>
                       <p className="text-xs text-slate-400 leading-relaxed">
-                        বামে খালি ফিল্ডগুলো পূরণ করে <b>"{selectedTool.subtitle || 'Generate'}"</b> বাটনে ক্লিক করলেই লাইভ API থেকে প্রস্তুত ছবি এখানে প্রদর্শিত হবে।
+                        বামে খালি ফিল্ডগুলো পূরণ করে বাটনে ক্লিক করলেই লাইভ API থেকে প্রস্তুত ছবি এখানে প্রদর্শিত হবে।
                       </p>
                     </div>
                   )}
