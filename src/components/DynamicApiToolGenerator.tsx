@@ -96,6 +96,51 @@ export default function DynamicApiToolGenerator({
     }
   }
 
+  // Auto-extract query parameters if user pastes full URL with parameters (e.g. ?type=ng&amount=5,000.00&...)
+  const autoExtractParametersFromUrl = (urlToParse?: string) => {
+    const raw = (urlToParse || targetApiUrl || '').trim()
+    if (!raw.includes('?')) return
+    try {
+      const [base, queryString] = raw.split('?')
+      if (!queryString) return
+      
+      const searchParams = new URLSearchParams(queryString)
+      const newParams: ApiParameter[] = []
+
+      searchParams.forEach((val, key) => {
+        let label = key
+        if (key.toLowerCase() === 'trxid') label = 'Transaction ID'
+        else if (key.toLowerCase() === 'sender') label = 'Sender Phone'
+        else if (key.toLowerCase() === 'recipient' || key.toLowerCase() === 'receiver') label = 'Recipient Phone'
+        else if (key.toLowerCase() === 'amount') label = 'Amount (TK)'
+        else if (key.toLowerCase() === 'type') label = 'Receipt Type'
+        else {
+          label = key
+            .replace(/([A-Z])/g, ' $1')
+            .replace(/[_-]/g, ' ')
+            .trim()
+            .replace(/^\w/, c => c.toUpperCase())
+        }
+
+        newParams.push({
+          id: Date.now().toString() + Math.random().toString(36).substr(2, 4),
+          field_key: key.trim(),
+          field_label: label,
+          field_type: 'text',
+          placeholder: val ? `উদাহরণ: ${val}` : `Enter ${label}`,
+          is_required: true,
+        })
+      })
+
+      if (newParams.length > 0) {
+        setTargetApiUrl(base.trim())
+        setParameters(newParams)
+      }
+    } catch (e) {
+      console.warn('URL parsing note:', e)
+    }
+  }
+
   // Add parameter row
   const addParameter = () => {
     setParameters([
@@ -386,6 +431,23 @@ export default function DynamicApiToolGenerator({
                 placeholder="উদাহরণ: https://your-app.vercel.app/api/receipt অথবা /bot/money/binance.php"
                 className="w-full bg-[#080d1a] border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-xs text-amber-300 font-mono placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition"
               />
+
+              {/* Smart Auto-Extract parameters banner when URL has query string */}
+              {targetApiUrl && targetApiUrl.includes('?') && (
+                <div className="mt-2.5 p-3 rounded-xl bg-gradient-to-r from-amber-500/15 to-purple-500/15 border border-amber-500/30 flex flex-wrap items-center justify-between gap-2.5 shadow-md">
+                  <div className="text-[11px] text-amber-300">
+                    💡 <b>ফুল লিঙ্ক ও প্যারামিটার সনাক্ত হয়েছে!</b> আপনি কি লিঙ্ক থেকে প্যারামিটারগুলো স্বয়ংক্রিয় আলাদা করতে চান?
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => autoExtractParametersFromUrl()}
+                    className="px-3.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-xs transition flex items-center gap-1.5 shadow-md active:scale-95 cursor-pointer shrink-0"
+                  >
+                    <span>⚡ ১-ক্লিকে প্যারামিটারগুলো আলাদা করুন</span>
+                  </button>
+                </div>
+              )}
+
               <p className="text-[10px] text-slate-400 mt-1">
                 এখানে আপনার আসল API লিঙ্ক দিন। সিস্টেম স্বয়ংক্রিয়ভাবে নিচের প্যারামিটারগুলো এর সাথে যুক্ত করে ছবি রিকুয়েস্ট পাঠাবে।
               </p>
