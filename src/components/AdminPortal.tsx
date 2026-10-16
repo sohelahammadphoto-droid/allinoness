@@ -6,6 +6,7 @@ import {
   Zap, Globe, Edit3, Layers
 } from 'lucide-react'
 import CountdownTimer from './CountdownTimer'
+import DynamicApiToolGenerator from './DynamicApiToolGenerator'
 import { AuthSession, TenantInfo, TenantUser, TemplateInfo, DynamicField, DynamicService } from '../types'
 
 interface AdminPortalProps {
@@ -26,7 +27,7 @@ export default function AdminPortal({ onBackToApp, session, onLogout }: AdminPor
   const [isLoadingUsers, setIsLoadingUsers] = useState(false)
 
   // Super Admin data
-  const [superTab, setSuperTab] = useState<'tenants' | 'services' | 'parameters'>('services')
+  const [superTab, setSuperTab] = useState<'builder' | 'tenants' | 'services' | 'parameters'>('builder')
   const [tenantsList, setTenantsList] = useState<TenantInfo[]>([])
   const [isLoadingTenants, setIsLoadingTenants] = useState(false)
   const [isCreateTenantModalOpen, setIsCreateTenantModalOpen] = useState(false)
@@ -620,6 +621,18 @@ export default function AdminPortal({ onBackToApp, session, onLogout }: AdminPor
     )
   }
 
+  // RENDER: DYNAMIC API TOOL GENERATOR PANEL (Matching user screenshot)
+  if (session.role === 'superadmin' && superTab === 'builder') {
+    return (
+      <DynamicApiToolGenerator
+        onBackToDashboard={() => setSuperTab('services')}
+        onOpenTool={(slug) => {
+          if (onBackToApp) onBackToApp()
+        }}
+      />
+    )
+  }
+
   // RENDER: SUPER ADMINISTRATOR PANEL
   return (
     <div className="w-full max-w-4xl mx-auto p-4 sm:p-6 pb-28 space-y-6">
@@ -643,6 +656,13 @@ export default function AdminPortal({ onBackToApp, session, onLogout }: AdminPor
         </div>
 
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setSuperTab('builder')}
+            className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-xs font-black shadow-md flex items-center gap-1.5 hover:from-purple-500 hover:to-indigo-500 transition cursor-pointer"
+          >
+            <span>🚀</span>
+            <span>Launch Tool Builder</span>
+          </button>
           <span className="text-xs text-emerald-400 font-semibold flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             Cloudflare D1 Live
@@ -650,18 +670,30 @@ export default function AdminPortal({ onBackToApp, session, onLogout }: AdminPor
         </div>
       </div>
 
-      {/* 3-Mode Switcher */}
-      <div className="flex bg-slate-900 p-1.5 rounded-2xl border border-slate-800 gap-1">
+      {/* Mode Switcher */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 bg-slate-900 p-1.5 rounded-2xl border border-slate-800 gap-1">
+        <button
+          onClick={() => setSuperTab('builder')}
+          className={`py-2.5 rounded-xl text-xs sm:text-sm font-bold transition flex items-center justify-center gap-1.5 ${
+            superTab === 'builder'
+              ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md'
+              : 'text-slate-400 hover:text-white'
+          }`}
+        >
+          <span>🚀</span>
+          <span>Tool Generator</span>
+        </button>
+
         <button
           onClick={() => setSuperTab('services')}
-          className={`flex-1 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition flex items-center justify-center gap-1.5 ${
+          className={`py-2.5 rounded-xl text-xs sm:text-sm font-bold transition flex items-center justify-center gap-1.5 ${
             superTab === 'services'
               ? 'bg-indigo-600 text-white shadow-md'
               : 'text-slate-400 hover:text-white'
           }`}
         >
           <Globe className="w-4 h-4" />
-          <span>Dynamic Services & APIs ({servicesList.length})</span>
+          <span>Services ({servicesList.length})</span>
         </button>
 
         <button

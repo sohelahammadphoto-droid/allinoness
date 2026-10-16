@@ -6,18 +6,21 @@ import BinanceReceipt from './components/BinanceReceipt'
 import BkashReceipt from './components/BkashReceipt'
 import NagadReceipt from './components/NagadReceipt'
 import DynamicFormPanel from './components/DynamicFormPanel'
+import DynamicToolRunner from './components/DynamicToolRunner'
 import PwaInstallModal from './components/PwaInstallModal'
 import { toPng } from 'html-to-image'
 import { ArrowLeft, Zap, LogOut, ShieldCheck, Home } from 'lucide-react'
 import { AuthSession, DynamicService, TemplateType } from './types'
 
-type AppView = 'landing' | 'login' | 'dashboard' | 'generator'
+type AppView = 'landing' | 'login' | 'dashboard' | 'generator' | 'tool_runner'
 
 function getInitialView(): AppView {
   if (typeof window === 'undefined') return 'landing'
   const searchParams = new URLSearchParams(window.location.search)
   const view = searchParams.get('view')
+  const toolName = searchParams.get('name') || searchParams.get('tool')
 
+  if (toolName) return 'tool_runner'
   if (view === 'login') return 'login'
   if (view === 'dashboard') return 'dashboard'
   if (searchParams.has('type')) return 'generator'
@@ -27,6 +30,11 @@ function getInitialView(): AppView {
 
 export default function App() {
   const [currentView, setCurrentView] = useState<AppView>(getInitialView)
+  const [activeToolSlug, setActiveToolSlug] = useState<string>(() => {
+    if (typeof window === 'undefined') return ''
+    const p = new URLSearchParams(window.location.search)
+    return p.get('name') || p.get('tool') || ''
+  })
   const [activeTemplate, setActiveTemplate] = useState<TemplateType>('binance')
   const [isInstallModalOpen, setIsInstallModalOpen] = useState(false)
   const [isDownloading, setIsDownloading] = useState(false)
@@ -63,9 +71,12 @@ export default function App() {
   // Navigation handlers
   const goToLanding = () => {
     setCurrentView('landing')
+    setActiveToolSlug('')
     const url = new URL(window.location.href)
     url.searchParams.delete('view')
     url.searchParams.delete('type')
+    url.searchParams.delete('name')
+    url.searchParams.delete('tool')
     window.history.pushState({}, '', url.toString())
   }
 
@@ -92,21 +103,30 @@ export default function App() {
     const key = service.service_key.toLowerCase()
     if (key === 'bkash' || key === 'bk') {
       setActiveTemplate('bk')
+      setCurrentView('generator')
+      const url = new URL(window.location.href)
+      url.searchParams.set('type', 'bk')
+      window.history.pushState({}, '', url.toString())
     } else if (key === 'nagad' || key === 'ng') {
       setActiveTemplate('ng')
+      setCurrentView('generator')
+      const url = new URL(window.location.href)
+      url.searchParams.set('type', 'ng')
+      window.history.pushState({}, '', url.toString())
     } else if (key === 'binance') {
       setActiveTemplate('binance')
-    } else if (service.api_url && service.api_url.startsWith('http')) {
-      window.open(service.api_url, '_blank')
-      return
+      setCurrentView('generator')
+      const url = new URL(window.location.href)
+      url.searchParams.set('type', 'binance')
+      window.history.pushState({}, '', url.toString())
     } else {
-      setActiveTemplate('binance')
+      // Dynamic Custom API Tool Runner
+      setActiveToolSlug(key)
+      setCurrentView('tool_runner')
+      const url = new URL(window.location.href)
+      url.searchParams.set('name', key)
+      window.history.pushState({}, '', url.toString())
     }
-
-    setCurrentView('generator')
-    const url = new URL(window.location.href)
-    url.searchParams.set('type', key)
-    window.history.pushState({}, '', url.toString())
   }
 
   // 1-Click High-Res PNG Download
@@ -139,6 +159,16 @@ export default function App() {
   // Check if we should hide navigation bars (for screenshotting / Puppeteer API)
   const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams()
   const hideNav = searchParams.get('hideNav') === 'true' || searchParams.get('clean') === '1'
+
+  // 0. DYNAMIC TOOL RUNNER (For any Custom API Tools generated in the panel)
+  if (currentView === 'tool_runner' && !hideNav) {
+    return (
+      <DynamicToolRunner
+        toolSlug={activeToolSlug || searchParams.get('name') || searchParams.get('tool') || 'receipt'}
+        onBack={goToLanding}
+      />
+    )
+  }
 
   // 1. PROFESSIONAL LANDING PAGE (DEFAULT)
   if (currentView === 'landing' && !hideNav) {
