@@ -67,9 +67,11 @@ export interface TenantInfo {
   expires_timestamp?: number
   user_count?: number
   banned_count?: number
+  total_generations?: number
   stats?: {
     total_users: number
     banned_users: number
+    total_generations?: number
   }
 }
 
@@ -82,6 +84,8 @@ export interface AuthSession {
     name?: string
     full_name?: string
     tenant_name?: string
+    tenant_id?: number
+    generation_count?: number
   }
   tenant?: TenantInfo
   isExpired?: boolean

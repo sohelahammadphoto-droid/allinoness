@@ -113,6 +113,26 @@ export default function DynamicToolRunner({ toolSlug, onBack }: DynamicToolRunne
           throw new Error(data.error || data.message || 'API কোনো ছবি রিটার্ন করেনি')
         }
       }
+
+      // Record generation in Cloudflare D1
+      try {
+        const storedAuth = localStorage.getItem('receipt_app_auth')
+        if (storedAuth) {
+          const authObj = JSON.parse(storedAuth)
+          if (authObj?.user?.id) {
+            fetch('/api/user/record-generation', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                user_id: authObj.user.id,
+                tenant_id: authObj.user.tenant_id || authObj.tenant?.id,
+                template_code: toolSlug || 'receipt',
+                summary_info: `Tool: ${tool?.name || toolSlug}`,
+              })
+            }).catch(() => {})
+          }
+        }
+      } catch (recErr) {}
     } catch (err: any) {
       setErrorMessage(err.message || 'রিকুয়েস্ট পাঠাতে ব্যর্থ হয়েছে')
     } finally {

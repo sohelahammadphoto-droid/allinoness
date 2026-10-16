@@ -10,7 +10,8 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       SELECT t.id, t.tenant_code, t.name, t.email, t.password_hash, t.expires_at, t.status, 
              t.max_users, t.notes, t.created_at,
              COUNT(u.id) as user_count,
-             SUM(CASE WHEN u.is_banned = 1 THEN 1 ELSE 0 END) as banned_count
+             SUM(CASE WHEN u.is_banned = 1 THEN 1 ELSE 0 END) as banned_count,
+             COALESCE(SUM(u.generation_count), 0) as total_generations
       FROM tenants t
       LEFT JOIN users u ON t.id = u.tenant_id
       GROUP BY t.id
@@ -25,12 +26,19 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       const isExpired = diffMs <= 0 || t.status === 'expired';
       return {
         ...t,
+        total_generations: Number(t.total_generations) || 0,
         is_expired: isExpired,
         remaining_ms: Math.max(0, diffMs),
       };
     });
 
-    return new Response(JSON.stringify({ success: true, tenants: enriched }), {
+    const totalSystemGenerations = enriched.reduce((acc: number, t: any) => acc + (t.total_generations || 0), 0);
+
+    return new Response(JSON.stringify({ 
+      success: true, 
+      tenants: enriched,
+      total_generations: totalSystemGenerations 
+    }), {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (err: any) {

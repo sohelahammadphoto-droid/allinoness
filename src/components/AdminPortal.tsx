@@ -244,6 +244,7 @@ export default function AdminPortal({ onBackToApp, session, onLogout }: AdminPor
   // RENDER: CLIENT ADMIN DASHBOARD
   if (session.role === 'client_admin') {
     const currentTenant = subscription || session.tenant
+    const totalTenantGenerations = users.reduce((acc, u) => acc + (Number(u.generation_count) || 0), 0)
 
     return (
       <div className="w-full max-w-2xl mx-auto p-4 sm:p-6 pb-28 space-y-5">
@@ -283,13 +284,20 @@ export default function AdminPortal({ onBackToApp, session, onLogout }: AdminPor
           />
         )}
 
-        {/* 2. Tenant Stats Overview */}
-        <div className="grid grid-cols-3 gap-2.5">
+        {/* 2. Tenant Stats Overview (Total Users, Total API Calls, Active, Banned) */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
           <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-3 text-center">
             <span className="text-lg font-black text-white block">
               {users.length} <span className="text-xs font-normal text-slate-400">/ {currentTenant?.max_users || 100}</span>
             </span>
             <span className="text-[10px] uppercase font-bold text-slate-400">Total Users</span>
+          </div>
+
+          <div className="bg-gradient-to-b from-amber-500/15 to-amber-500/5 border border-amber-500/30 rounded-xl p-3 text-center shadow-sm">
+            <span className="text-lg font-black text-amber-400 block flex items-center justify-center gap-1">
+              <span>⚡</span> {totalTenantGenerations}
+            </span>
+            <span className="text-[10px] uppercase font-bold text-amber-300/90">Total API Calls</span>
           </div>
 
           <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-3 text-center">
@@ -359,8 +367,15 @@ export default function AdminPortal({ onBackToApp, session, onLogout }: AdminPor
                       {user.username.charAt(0).toUpperCase()}
                     </div>
                     <div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <span className="text-xs font-bold text-white">{user.username}</span>
+                        
+                        {/* Distinct User API Calls / Receipt Count Badge */}
+                        <span className="text-[10px] bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded-full font-bold flex items-center gap-1 shadow-sm" title="Total receipts created / API calls by this user">
+                          <span>⚡</span>
+                          <span>{user.generation_count || 0} made</span>
+                        </span>
+
                         {user.is_banned === 1 ? (
                           <span className="text-[10px] bg-rose-500/20 text-rose-400 border border-rose-500/30 px-1.5 py-0.2 rounded-full font-semibold">
                             Banned
@@ -371,7 +386,11 @@ export default function AdminPortal({ onBackToApp, session, onLogout }: AdminPor
                           </span>
                         )}
                       </div>
-                      <span className="text-[10px] text-slate-400 block">{user.full_name || 'End User'}</span>
+                      <div className="flex items-center gap-2 text-[10px] text-slate-400 mt-0.5">
+                        <span>{user.full_name || 'End User'}</span>
+                        <span>•</span>
+                        <span className="text-amber-400 font-medium">Total API Calls: <b className="text-white">{user.generation_count || 0}</b></span>
+                      </div>
                     </div>
                   </div>
 
@@ -509,9 +528,15 @@ export default function AdminPortal({ onBackToApp, session, onLogout }: AdminPor
                 Cloudflare D1 Live
               </span>
             </h2>
-            <span className="text-[11px] text-slate-400">
-              Tool Generator & Client Admin License Management
-            </span>
+            <div className="flex flex-wrap items-center gap-2 mt-1">
+              <span className="text-[11px] text-slate-400">
+                Tool Generator & Client Admin License Management
+              </span>
+              <span className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full font-bold flex items-center gap-1 shadow-sm">
+                <span>⚡</span>
+                <span>Total System API Calls: {tenantsList.reduce((acc, t) => acc + (t.total_generations || 0), 0)}</span>
+              </span>
+            </div>
           </div>
         </div>
 
@@ -602,9 +627,15 @@ export default function AdminPortal({ onBackToApp, session, onLogout }: AdminPor
                   </div>
 
                   <div className="flex items-center justify-between pt-1">
-                    <span className="text-xs text-slate-400">
-                      👥 Users: <b className="text-white">{tenant.user_count || 0}</b> / {tenant.max_users}
-                    </span>
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-xs text-slate-400">
+                        👥 Users: <b className="text-white">{tenant.user_count || 0}</b> / {tenant.max_users}
+                      </span>
+                      <span className="text-[11px] text-amber-400 font-bold flex items-center gap-1">
+                        <span>⚡</span>
+                        <span>Receipts / API Calls: <b className="text-white">{tenant.total_generations || 0}</b></span>
+                      </span>
+                    </div>
 
                     <div className="flex items-center gap-1.5">
                       <button

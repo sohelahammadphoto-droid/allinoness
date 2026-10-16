@@ -16,7 +16,14 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       ORDER BY id DESC
     `).bind(tenantId).all();
 
-    return new Response(JSON.stringify({ success: true, users: results || [] }), {
+    const userList = results || [];
+    const totalGenerations = userList.reduce((acc: number, u: any) => acc + (Number(u.generation_count) || 0), 0);
+
+    return new Response(JSON.stringify({ 
+      success: true, 
+      users: userList,
+      total_generations: totalGenerations 
+    }), {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (err: any) {

@@ -59,6 +59,56 @@ export default function UserDashboard({ session, onSignOut, onGoToHome }: UserDa
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null)
   const [errorMessage, setErrorMessage] = useState<string>('')
 
+  const [userGenerations, setUserGenerations] = useState<number>(session.user?.generation_count || 0)
+
+  // Fetch initial user generation count from backend
+  useEffect(() => {
+    if (!session.user?.id) return
+    const fetchUserStats = async () => {
+      try {
+        const tenantId = session.user?.tenant_id || session.tenant?.id || '1'
+        const res = await fetch(`/api/admin/users?tenant_id=${tenantId}`)
+        const data = await res.json() as any
+        if (data.success && Array.isArray(data.users)) {
+          const me = data.users.find((u: any) => u.id === session.user?.id)
+          if (me && typeof me.generation_count === 'number') {
+            setUserGenerations(me.generation_count)
+          }
+        }
+      } catch (e) {
+        // quiet ignore
+      }
+    }
+    fetchUserStats()
+  }, [session.user?.id])
+
+  // Record generation to Cloudflare D1
+  const recordGeneration = async () => {
+    try {
+      const userId = session?.user?.id
+      if (!userId) return
+
+      setUserGenerations(prev => prev + 1)
+
+      const res = await fetch('/api/user/record-generation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: userId,
+          tenant_id: session?.user?.tenant_id || session?.tenant?.id,
+          template_code: selectedToolKey || selectedTool?.tool_slug || 'receipt',
+          summary_info: `Tool: ${selectedTool?.name || selectedToolKey}, Amount: ${formValues['amount'] || ''}`,
+        })
+      })
+      const data = await res.json() as any
+      if (data.success && typeof data.generation_count === 'number') {
+        setUserGenerations(data.generation_count)
+      }
+    } catch (e) {
+      console.warn('Failed to record generation:', e)
+    }
+  }
+
   // 1. Fetch available dynamic tools from D1 database
   useEffect(() => {
     const fetchTools = async () => {
@@ -237,11 +287,13 @@ export default function UserDashboard({ session, onSignOut, onGoToHome }: UserDa
         const blob = await res.blob()
         const objectUrl = URL.createObjectURL(blob)
         setGeneratedImageUrl(objectUrl)
+        recordGeneration()
       } else {
         const data = await res.json() as any
         const img = data.image || data.imageUrl || data.url || data.screenshot || data.data
         if (img) {
           setGeneratedImageUrl(img)
+          recordGeneration()
         } else {
           throw new Error(data.error || data.message || 'API কোনো ছবি প্রদান করেনি')
         }
@@ -298,6 +350,12 @@ export default function UserDashboard({ session, onSignOut, onGoToHome }: UserDa
             <span className="hidden xs:inline sm:inline">Install App</span>
             <span className="xs:hidden sm:hidden">Install</span>
           </button>
+
+          {/* User Live Receipts / API Calls Badge */}
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-bold shadow-sm" title="Total receipts created / API calls by you">
+            <Zap className="w-3.5 h-3.5 text-amber-400" />
+            <span>{userGenerations} Receipts</span>
+          </div>
 
           <span className="text-xs text-slate-400 hidden md:inline">
             User: <b className="text-white">{session.user?.full_name || session.user?.username}</b>
