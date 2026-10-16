@@ -1,11 +1,13 @@
+import React, { useState, useEffect } from 'react'
 import { 
   Home, LogOut, Zap, Download, RefreshCw, AlertTriangle, 
   CheckCircle, Sparkles, ArrowLeft, ArrowRight, Grid,
   Image as ImageIcon, MessageSquare, Plus, Trash2, ChevronRight,
-  Clock, Calendar
+  Clock, Calendar, Smartphone
 } from 'lucide-react'
 import { AuthSession, DynamicService } from '../types'
 import { ApiParameter } from './DynamicApiToolGenerator'
+import PwaInstallModal from './PwaInstallModal'
 
 function getCurrentBdTime(): string {
   return new Intl.DateTimeFormat('en-US', {
@@ -44,6 +46,9 @@ export default function UserDashboard({ session, onSignOut, onGoToHome }: UserDa
   const [fields, setFields] = useState<ApiParameter[]>([])
   const [formValues, setFormValues] = useState<Record<string, string>>({})
   
+  // PWA Install Modal state
+  const [isInstallModalOpen, setIsInstallModalOpen] = useState(false)
+
   // 2nd Message Toggle and Values (for Nagad & bKash)
   const [showSecondMsg, setShowSecondMsg] = useState(false)
   const [secondMsgValues, setSecondMsgValues] = useState<Record<string, string>>({})
@@ -282,8 +287,19 @@ export default function UserDashboard({ session, onSignOut, onGoToHome }: UserDa
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <span className="text-xs text-slate-400 hidden sm:inline">
+        <div className="flex items-center gap-2 sm:gap-3">
+          {/* Mobile-Friendly Install App Header Button */}
+          <button
+            onClick={() => setIsInstallModalOpen(true)}
+            className="px-2.5 py-1.5 sm:px-3 sm:py-1.5 rounded-xl bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-amber-500/20 hover:from-amber-500/30 hover:to-orange-500/30 text-amber-300 border border-amber-500/40 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
+            title="Install App on Phone"
+          >
+            <Smartphone className="w-3.5 h-3.5 text-amber-400" />
+            <span className="hidden xs:inline sm:inline">Install App</span>
+            <span className="xs:hidden sm:hidden">Install</span>
+          </button>
+
+          <span className="text-xs text-slate-400 hidden md:inline">
             User: <b className="text-white">{session.user?.full_name || session.user?.username}</b>
           </span>
           <button
@@ -316,6 +332,33 @@ export default function UserDashboard({ session, onSignOut, onGoToHome }: UserDa
                   Select an application below to open its generator form, enter custom details, and download instant high-resolution receipts.
                 </p>
               </div>
+            </div>
+
+            {/* Install App Banner (Mobile & Desktop) */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-amber-500/10 via-slate-900 to-indigo-950/40 border border-amber-500/30 shadow-xl">
+              <div className="flex items-center gap-3.5 text-center sm:text-left">
+                <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-amber-500 to-orange-500 flex items-center justify-center text-black shadow-lg shadow-amber-500/25 shrink-0 mx-auto sm:mx-0">
+                  <Smartphone className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-extrabold text-white flex items-center gap-2 justify-center sm:justify-start">
+                    <span>Install Mobile App</span>
+                    <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-bold border border-amber-500/30">
+                      PWA Fast
+                    </span>
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    আপনার অ্যান্ড্রয়েড বা আইফোনে ইনস্টল করে ব্রাউজার বার ছাড়া ফুল-স্ক্রিনে সরাসরি ব্যবহার করুন।
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsInstallModalOpen(true)}
+                className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black font-black text-xs shadow-lg shadow-amber-500/25 transition active:scale-95 flex items-center justify-center gap-2 cursor-pointer shrink-0"
+              >
+                <Download className="w-4 h-4" />
+                <span>Install App on Phone</span>
+              </button>
             </div>
 
             {/* Apps Grid */}
@@ -881,6 +924,11 @@ export default function UserDashboard({ session, onSignOut, onGoToHome }: UserDa
           </div>
         )}
       </main>
+      {/* PWA Install Modal */}
+      <PwaInstallModal
+        isOpen={isInstallModalOpen}
+        onClose={() => setIsInstallModalOpen(false)}
+      />
     </div>
   )
 }
