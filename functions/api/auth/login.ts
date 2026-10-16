@@ -13,21 +13,16 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       });
     }
 
+    const cleanUser = String(username).trim();
+    const cleanPass = String(password).trim();
     const db = context.env.DB;
 
-    // 1. Super Admin Login
-    if (role === 'superadmin' || role === 'super_admin') {
-      const superAdmin = await db.prepare(
-        'SELECT id, username, name FROM super_admins WHERE username = ? AND password_hash = ?'
-      ).bind(username, password).first();
+    // 1. Check Super Admin Table First
+    const superAdmin = await db.prepare(
+      'SELECT id, username, name FROM super_admins WHERE username = ? AND password_hash = ?'
+    ).bind(cleanUser, cleanPass).first();
 
-      if (!superAdmin) {
-        return new Response(JSON.stringify({ error: 'Invalid Super Admin credentials' }), {
-          status: 401,
-          headers: { 'Content-Type': 'application/json' },
-        });
-      }
-
+    if (superAdmin) {
       return new Response(JSON.stringify({
         token: `sa_${superAdmin.id}_${Date.now()}`,
         role: 'superadmin',
@@ -41,20 +36,13 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       });
     }
 
-    // 2. Client Admin (Tenant) Login
-    if (role === 'client_admin' || role === 'tenant') {
-      const tenant = await db.prepare(
-        'SELECT id, tenant_code, name, email, expires_at, status, max_users FROM tenants WHERE (tenant_code = ? OR email = ?) AND password_hash = ?'
-      ).bind(username, username, password).first() as any;
+    // 2. Check Client Admin (Tenants) Table
+    const tenant = await db.prepare(
+      'SELECT id, tenant_code, name, email, expires_at, status, max_users FROM tenants WHERE (tenant_code = ? OR email = ?) AND password_hash = ?'
+    ).bind(cleanUser, cleanUser, cleanPass).first() as any;
 
-      if (!tenant) {
-        return new Response(JSON.stringify({ error: 'Invalid Admin credentials' }), {
-          status: 401,
-          headers: { 'Content-Type': 'application/json' },
-        });
-      }
-
-      const expiresDate = new Date(tenant.expires_at.replace(' ', 'T') + 'Z');
+    if (tenant) {
+      const expiresDate = new Date(tenant.expires_at.replace(' ', 'T') + (tenant.expires_at.endsWith('Z') ? '' : 'Z'));
       const isExpired = Date.now() > expiresDate.getTime() || tenant.status === 'expired';
 
       return new Response(JSON.stringify({
@@ -75,15 +63,14 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       });
     }
 
-    // 3. End User Login (or auto-detect)
-    // Check if user is in users table
+    // 3. Check End Users Table
     const endUser = await db.prepare(
       `SELECT u.id, u.tenant_id, u.username, u.full_name, u.is_banned, u.daily_limit, 
               t.expires_at as tenant_expires_at, t.status as tenant_status, t.name as tenant_name
        FROM users u
        JOIN tenants t ON u.tenant_id = t.id
        WHERE u.username = ? AND u.password_hash = ?`
-    ).bind(username, password).first() as any;
+    ).bind(cleanUser, cleanPass).first() as any;
 
     if (endUser) {
       if (endUser.is_banned === 1) {
@@ -93,7 +80,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         });
       }
 
-      const tenantExpiresDate = new Date(endUser.tenant_expires_at.replace(' ', 'T') + 'Z');
+      const tenantExpiresDate = new Date(endUser.tenant_expires_at.replace(' ', 'T') + (endUser.tenant_expires_at.endsWith('Z') ? '' : 'Z'));
       if (Date.now() > tenantExpiresDate.getTime() || endUser.tenant_status === 'expired') {
         return new Response(JSON.stringify({ error: 'Organization subscription has expired. Please contact your admin.' }), {
           status: 403,
@@ -114,37 +101,6 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       }), {
         headers: { 'Content-Type': 'application/json' },
       });
-    }
-
-    // Fallback: Check if they are Super Admin or Tenant if role was not specified
-    const checkSA = await db.prepare(
-      'SELECT id, username, name FROM super_admins WHERE username = ? AND password_hash = ?'
-    ).bind(username, password).first();
-
-    if (checkSA) {
-      return new Response(JSON.stringify({
-        token: `sa_${checkSA.id}_${Date.now()}`,
-        role: 'superadmin',
-        user: checkSA
-      }), { headers: { 'Content-Type': 'application/json' } });
-    }
-
-    const checkTenant = await db.prepare(
-      'SELECT id, tenant_code, name, email, expires_at, status, max_users FROM tenants WHERE (tenant_code = ? OR email = ?) AND password_hash = ?'
-    ).bind(username, username, password).first() as any;
-
-    if (checkTenant) {
-      const expiresDate = new Date(checkTenant.expires_at.replace(' ', 'T') + 'Z');
-      const isExpired = Date.now() > expiresDate.getTime() || checkTenant.status === 'expired';
-      return new Response(JSON.stringify({
-        token: `ca_${checkTenant.id}_${Date.now()}`,
-        role: 'client_admin',
-        isExpired,
-        tenant: {
-          ...checkTenant,
-          status: isExpired ? 'expired' : checkTenant.status
-        }
-      }), { headers: { 'Content-Type': 'application/json' } });
     }
 
     return new Response(JSON.stringify({ error: 'Invalid username or password' }), {

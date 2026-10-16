@@ -1,89 +1,115 @@
 import { useState, useEffect } from 'react'
-import SkyFakePayHome from './components/SkyFakePayHome'
+import LandingPage from './components/LandingPage'
+import SingleLoginPage from './components/SingleLoginPage'
+import AdminPortal from './components/AdminPortal'
 import BinanceReceipt from './components/BinanceReceipt'
 import BkashReceipt from './components/BkashReceipt'
 import NagadReceipt from './components/NagadReceipt'
-import AdminPortal from './components/AdminPortal'
 import DynamicFormPanel from './components/DynamicFormPanel'
 import PwaInstallModal from './components/PwaInstallModal'
 import { toPng } from 'html-to-image'
-import { ArrowLeft, Zap, Download } from 'lucide-react'
-import { AuthSession } from './types'
+import { ArrowLeft, Zap, LogOut, ShieldCheck, Home } from 'lucide-react'
+import { AuthSession, DynamicService, TemplateType } from './types'
 
-type AppView = 'home' | 'generator' | 'admin'
-type TemplateType = 'binance' | 'bk' | 'ng'
+type AppView = 'landing' | 'login' | 'dashboard' | 'generator'
 
-function getInitialState(): { view: AppView; template: TemplateType } {
-  if (typeof window === 'undefined') return { view: 'home', template: 'binance' }
-
+function getInitialView(): AppView {
+  if (typeof window === 'undefined') return 'landing'
   const searchParams = new URLSearchParams(window.location.search)
-  const queryType = (searchParams.get('type') || searchParams.get('app') || '').toLowerCase()
-  const viewParam = searchParams.get('view')
+  const view = searchParams.get('view')
 
-  if (viewParam === 'admin') {
-    return { view: 'admin', template: 'binance' }
-  }
+  if (view === 'login') return 'login'
+  if (view === 'dashboard') return 'dashboard'
+  if (searchParams.has('type')) return 'generator'
 
-  // ONLY open generator if explicit type query parameter is provided
-  if (queryType === 'bk' || queryType === 'bkash') {
-    return { view: 'generator', template: 'bk' }
-  }
-  if (queryType === 'ng' || queryType === 'nagad') {
-    return { view: 'generator', template: 'ng' }
-  }
-  if (queryType === 'binance') {
-    return { view: 'generator', template: 'binance' }
-  }
-
-  // Default is ALWAYS the Sky Fake Pay Home screen!
-  return { view: 'home', template: 'binance' }
+  return 'landing'
 }
 
 export default function App() {
-  const initial = getInitialState()
-  const [currentView, setCurrentView] = useState<AppView>(initial.view)
-  const [activeTemplate, setActiveTemplate] = useState<TemplateType>(initial.template)
+  const [currentView, setCurrentView] = useState<AppView>(getInitialView)
+  const [activeTemplate, setActiveTemplate] = useState<TemplateType>('binance')
   const [isInstallModalOpen, setIsInstallModalOpen] = useState(false)
   const [isDownloading, setIsDownloading] = useState(false)
-  const [session, setSession] = useState<AuthSession | null>(null)
-
-  // Load session from localStorage
-  useEffect(() => {
+  const [session, setSession] = useState<AuthSession | null>(() => {
     try {
       const stored = localStorage.getItem('receipt_app_auth')
-      if (stored) setSession(JSON.parse(stored))
-    } catch {}
-  }, [currentView])
+      return stored ? JSON.parse(stored) : null
+    } catch {
+      return null
+    }
+  })
+
+  // Sync session changes to localStorage
+  const handleSaveSession = (newSession: AuthSession | null) => {
+    setSession(newSession)
+    if (newSession) {
+      localStorage.setItem('receipt_app_auth', JSON.stringify(newSession))
+      setCurrentView('dashboard')
+    } else {
+      localStorage.removeItem('receipt_app_auth')
+      setCurrentView('landing')
+    }
+  }
 
   // Handle URL changes
   useEffect(() => {
     const handleUrlChange = () => {
-      const updated = getInitialState()
-      setCurrentView(updated.view)
-      setActiveTemplate(updated.template)
+      setCurrentView(getInitialView())
     }
     window.addEventListener('popstate', handleUrlChange)
     return () => window.removeEventListener('popstate', handleUrlChange)
   }, [])
 
-  // Select Template from Home
-  const handleSelectTemplate = (template: TemplateType) => {
-    setActiveTemplate(template)
+  // Navigation handlers
+  const goToLanding = () => {
+    setCurrentView('landing')
+    const url = new URL(window.location.href)
+    url.searchParams.delete('view')
+    url.searchParams.delete('type')
+    window.history.pushState({}, '', url.toString())
+  }
+
+  const goToLogin = () => {
+    setCurrentView('login')
+    const url = new URL(window.location.href)
+    url.searchParams.set('view', 'login')
+    window.history.pushState({}, '', url.toString())
+  }
+
+  const goToDashboard = () => {
+    if (!session) {
+      goToLogin()
+      return
+    }
+    setCurrentView('dashboard')
+    const url = new URL(window.location.href)
+    url.searchParams.set('view', 'dashboard')
+    window.history.pushState({}, '', url.toString())
+  }
+
+  // Select a service from landing page
+  const handleSelectService = (service: DynamicService) => {
+    const key = service.service_key.toLowerCase()
+    if (key === 'bkash' || key === 'bk') {
+      setActiveTemplate('bk')
+    } else if (key === 'nagad' || key === 'ng') {
+      setActiveTemplate('ng')
+    } else if (key === 'binance') {
+      setActiveTemplate('binance')
+    } else if (service.api_url && service.api_url.startsWith('http')) {
+      window.open(service.api_url, '_blank')
+      return
+    } else {
+      setActiveTemplate('binance')
+    }
+
     setCurrentView('generator')
-    const currentUrl = new URL(window.location.href)
-    currentUrl.searchParams.set('type', template)
-    window.history.pushState({}, '', currentUrl.toString())
+    const url = new URL(window.location.href)
+    url.searchParams.set('type', key)
+    window.history.pushState({}, '', url.toString())
   }
 
-  // Go back to Home
-  const handleGoHome = () => {
-    setCurrentView('home')
-    const currentUrl = new URL(window.location.href)
-    currentUrl.searchParams.delete('type')
-    window.history.pushState({}, '', currentUrl.toString())
-  }
-
-  // Global Download
+  // 1-Click High-Res PNG Download
   const handleGlobalDownload = async () => {
     setIsDownloading(true)
     try {
@@ -110,77 +136,102 @@ export default function App() {
     }
   }
 
-  // Check if we should hide navigation bars (e.g. for API screenshotting / Puppeteer)
+  // Check if we should hide navigation bars (for screenshotting / Puppeteer API)
   const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams()
   const hideNav = searchParams.get('hideNav') === 'true' || searchParams.get('clean') === '1'
 
-  // 1. HOME VIEW (Matches uploaded screenshot - 100% dynamic services from D1)
-  const handleSelectService = (service: any) => {
-    if (service.service_key === 'bkash' || service.service_key === 'bk') {
-      handleSelectTemplate('bk')
-    } else if (service.service_key === 'nagad' || service.service_key === 'ng') {
-      handleSelectTemplate('ng')
-    } else if (service.service_key === 'binance') {
-      handleSelectTemplate('binance')
-    } else if (service.api_url && service.api_url.startsWith('http')) {
-      window.open(service.api_url, '_blank')
-    } else {
-      handleSelectTemplate('binance')
-    }
-  }
-
-  if (currentView === 'home' && !hideNav) {
+  // 1. PROFESSIONAL LANDING PAGE (DEFAULT)
+  if (currentView === 'landing' && !hideNav) {
     return (
-      <div className="min-h-screen bg-[#f8fafc]">
-        <SkyFakePayHome
+      <>
+        <LandingPage
+          onGoToLogin={goToLogin}
+          onGoToDashboard={goToDashboard}
           onSelectService={handleSelectService}
-          onOpenAuth={() => setCurrentView('admin')}
           session={session}
         />
         <PwaInstallModal
           isOpen={isInstallModalOpen}
           onClose={() => setIsInstallModalOpen(false)}
         />
-      </div>
+      </>
     )
   }
 
-  // 2. ADMIN PORTAL VIEW
-  if (currentView === 'admin' && !hideNav) {
+  // 2. SINGLE LOGIN PAGE FOR ALL USERS
+  if (currentView === 'login' && !hideNav) {
     return (
-      <div className="min-h-screen bg-slate-950 text-white flex flex-col">
-        {/* Top Header */}
-        <header className="sticky top-0 z-30 bg-slate-950/90 backdrop-blur-md px-4 py-3 flex items-center justify-between border-b border-slate-800">
-          <button
-            onClick={handleGoHome}
-            className="flex items-center gap-1.5 text-xs font-bold text-slate-300 hover:text-white px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 transition"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span>Home</span>
-          </button>
+      <SingleLoginPage
+        onSuccess={(authData) => handleSaveSession(authData)}
+        onBackToHome={goToLanding}
+      />
+    )
+  }
 
-          <span className="text-sm font-extrabold text-white">
-            Admin & Client Portal
-          </span>
+  // 3. DYNAMIC ROLE-BASED DASHBOARD (Super Admin / Client Admin)
+  if (currentView === 'dashboard' && !hideNav) {
+    return (
+      <div className="min-h-screen bg-[#070b14] text-slate-100 flex flex-col font-sans">
+        {/* Dashboard Top Header */}
+        <header className="sticky top-0 z-40 bg-[#070b14]/90 backdrop-blur-xl border-b border-slate-800/80 px-4 sm:px-8 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={goToLanding}
+              className="flex items-center gap-1.5 text-xs font-bold text-slate-300 hover:text-white px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 transition cursor-pointer"
+            >
+              <Home className="w-4 h-4 text-indigo-400" />
+              <span>Website</span>
+            </button>
 
-          <div className="w-16" />
+            <div className="h-5 w-px bg-slate-800 hidden sm:block" />
+
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-extrabold text-white">
+                {session?.role === 'superadmin' ? 'Master Control Dashboard' : 'Client Admin Dashboard'}
+              </span>
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                session?.role === 'superadmin' 
+                  ? 'bg-rose-500/20 text-rose-300 border-rose-500/30'
+                  : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+              }`}>
+                {session?.role === 'superadmin' ? 'Super Admin' : 'Client Tenant'}
+              </span>
+            </div>
+          </div>
+
+          {/* User profile & Logout */}
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-slate-400 hidden sm:inline">
+              Logged in as <b className="text-white">{session?.user?.username || session?.tenant?.tenant_code || 'Admin'}</b>
+            </span>
+
+            <button
+              onClick={() => handleSaveSession(null)}
+              className="p-2 sm:px-3 sm:py-1.5 rounded-xl bg-slate-900 hover:bg-rose-950/60 hover:text-rose-400 border border-slate-800 text-slate-400 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
+              title="Sign Out"
+            >
+              <LogOut className="w-4 h-4" />
+              <span className="hidden sm:inline">Sign Out</span>
+            </button>
+          </div>
         </header>
 
-        <main className="flex-1 flex justify-center items-start">
-          <AdminPortal onBackToApp={handleGoHome} />
+        {/* Dashboard Main Content */}
+        <main className="flex-1 flex justify-center items-start p-2 sm:p-6 pb-24">
+          <AdminPortal onBackToApp={goToLanding} />
         </main>
       </div>
     )
   }
 
-  // 3. GENERATOR VIEW (bKash / Nagad / Binance receipt screen with form & download)
+  // 4. GENERATOR VIEW (Statement receipt screen with form & download)
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
       {/* Generator Top App Header */}
       {!hideNav && (
         <header className="sticky top-0 z-40 bg-slate-950/90 backdrop-blur-xl border-b border-slate-800/80 px-4 py-2.5 shadow-sm flex items-center justify-between">
           <button
-            onClick={handleGoHome}
+            onClick={goToLanding}
             className="flex items-center gap-1.5 text-xs font-bold text-slate-300 hover:text-white px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 transition cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -190,7 +241,7 @@ export default function App() {
           {/* Service Switcher */}
           <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-xl border border-slate-800">
             <button
-              onClick={() => handleSelectTemplate('bk')}
+              onClick={() => setActiveTemplate('bk')}
               className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
                 activeTemplate === 'bk'
                   ? 'bg-[#e2136e] text-white shadow-sm'
@@ -202,7 +253,7 @@ export default function App() {
             </button>
 
             <button
-              onClick={() => handleSelectTemplate('ng')}
+              onClick={() => setActiveTemplate('ng')}
               className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
                 activeTemplate === 'ng'
                   ? 'bg-[#f6921e] text-white shadow-sm'
@@ -214,7 +265,7 @@ export default function App() {
             </button>
 
             <button
-              onClick={() => handleSelectTemplate('binance')}
+              onClick={() => setActiveTemplate('binance')}
               className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
                 activeTemplate === 'binance'
                   ? 'bg-amber-400 text-black shadow-sm'
@@ -226,12 +277,12 @@ export default function App() {
             </button>
           </div>
 
-          {/* Admin shortcut */}
+          {/* Dashboard shortcut */}
           <button
-            onClick={() => setCurrentView('admin')}
+            onClick={goToDashboard}
             className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition cursor-pointer"
           >
-            Admin
+            Dashboard
           </button>
         </header>
       )}
