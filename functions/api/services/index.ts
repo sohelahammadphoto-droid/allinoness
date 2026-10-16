@@ -80,6 +80,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       sort_order,
       caption,
       button_name,
+      has_second_msg,
       parameters, // Array of dynamic fields: [{ field_key, field_label, field_type, placeholder, is_required }]
     } = body;
 
@@ -92,6 +93,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
     const cleanKey = service_key.trim().toLowerCase();
     const cleanButtonName = button_name || subtitle || 'Fake Screenshot';
+    const hasSecondMsgVal = has_second_msg === 1 || has_second_msg === true ? 1 : 0;
 
     if (id) {
       // Update existing
@@ -105,7 +107,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
             api_url = ?,
             category = ?,
             is_active = ?,
-            sort_order = ?
+            sort_order = ?,
+            has_second_msg = ?
         WHERE id = ?
       `).bind(
         name.trim(),
@@ -117,13 +120,14 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         category || 'free',
         is_active !== undefined ? (is_active ? 1 : 0) : 1,
         sort_order || 1,
+        hasSecondMsgVal,
         id
       ).run();
     } else {
       // Insert new
       await db.prepare(`
-        INSERT INTO services (service_key, name, subtitle, icon_type, icon_val, bg_color, api_url, category, is_active, sort_order)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO services (service_key, name, subtitle, icon_type, icon_val, bg_color, api_url, category, is_active, sort_order, has_second_msg)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(service_key) DO UPDATE SET
           name = excluded.name,
           subtitle = excluded.subtitle,
@@ -133,7 +137,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
           api_url = excluded.api_url,
           category = excluded.category,
           is_active = excluded.is_active,
-          sort_order = excluded.sort_order
+          sort_order = excluded.sort_order,
+          has_second_msg = excluded.has_second_msg
       `).bind(
         cleanKey,
         name.trim(),
@@ -144,7 +149,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         api_url || `/${cleanKey}`,
         category || 'free',
         is_active !== undefined ? (is_active ? 1 : 0) : 1,
-        sort_order || 10
+        sort_order || 10,
+        hasSecondMsgVal
       ).run();
     }
 

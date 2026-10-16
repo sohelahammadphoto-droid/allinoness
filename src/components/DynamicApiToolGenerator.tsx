@@ -22,6 +22,7 @@ export interface ApiTool {
   api_url: string
   icon_val?: string
   is_active: number
+  has_second_msg?: number | boolean
   fields?: any[]
 }
 
@@ -47,6 +48,7 @@ export default function DynamicApiToolGenerator({
   const [buttonName, setButtonName] = useState('Fake Screenshot')
   const [targetApiUrl, setTargetApiUrl] = useState('')
   const [isActive, setIsActive] = useState(true)
+  const [hasSecondMsg, setHasSecondMsg] = useState(false)
 
   // Dynamic Parameters list
   const [parameters, setParameters] = useState<ApiParameter[]>([
@@ -216,6 +218,7 @@ export default function DynamicApiToolGenerator({
     setButtonName(tool.subtitle || 'Fake Screenshot')
     setTargetApiUrl(tool.api_url || '')
     setIsActive(tool.is_active === 1)
+    setHasSecondMsg(tool.has_second_msg === 1 || tool.has_second_msg === true)
 
     if (Array.isArray(tool.fields) && tool.fields.length > 0) {
       setParameters(tool.fields.map((f: any, idx: number) => ({
@@ -241,6 +244,7 @@ export default function DynamicApiToolGenerator({
     setButtonName('Fake Screenshot')
     setTargetApiUrl('')
     setIsActive(true)
+    setHasSecondMsg(false)
     setParameters([
       {
         id: '1',
@@ -277,6 +281,7 @@ export default function DynamicApiToolGenerator({
         icon_type: 'emoji',
         icon_val: '⚡',
         is_active: isActive ? 1 : 0,
+        has_second_msg: hasSecondMsg ? 1 : 0,
         sort_order: 1,
         parameters: parameters.filter(p => p.field_key.trim().length > 0).map((p, idx) => ({
           field_key: p.field_key.trim(),
@@ -601,7 +606,34 @@ export default function DynamicApiToolGenerator({
               </div>
             </div>
 
-            {/* 6: Active checkbox */}
+            {/* 6: 2nd Message Toggle (অন / অফ) */}
+            <div className="p-3.5 rounded-xl bg-[#080d1a] border border-slate-800 space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-base">💬</span>
+                  <div>
+                    <label htmlFor="second_msg_toggle" className="text-xs font-bold text-white cursor-pointer block">
+                      ৬. ২য় মেসেজ অপশন অন/অফ (Enable 2nd Message System)
+                    </label>
+                    <p className="text-[10px] text-slate-400">
+                      অন রাখলে ইউজারের ড্যাশবোর্ডে <b>"+ Need 2nd Msg"</b> বাটনটি দেখাবে (যেমন: বিকাশ/নগদ)। অফ রাখলে ২য় মেসেজের অপশন দেখাবে না।
+                    </p>
+                  </div>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                  <input
+                    type="checkbox"
+                    id="second_msg_toggle"
+                    checked={hasSecondMsg}
+                    onChange={(e) => setHasSecondMsg(e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-10 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
+                </label>
+              </div>
+            </div>
+
+            {/* 7: Active checkbox */}
             <div className="flex items-center gap-2 pt-1">
               <input
                 type="checkbox"
@@ -611,7 +643,7 @@ export default function DynamicApiToolGenerator({
                 className="w-4 h-4 rounded border-slate-700 text-indigo-600 focus:ring-0 cursor-pointer"
               />
               <label htmlFor="active_status" className="text-xs font-bold text-slate-200 cursor-pointer">
-                ৬. এই পেজটি চালু রাখুন (Active)
+                ৭. এই পেজটি চালু রাখুন (Active)
               </label>
             </div>
 

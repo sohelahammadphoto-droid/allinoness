@@ -227,7 +227,12 @@ export default function UserDashboard({ session, onSignOut, onGoToHome }: UserDa
     setSecondMsgValues((prev) => ({ ...prev, [key]: val }))
   }
 
-  // Detect whether current tool is Nagad or bKash
+  // Check whether current tool has 2nd message enabled via admin setting
+  const toolHasSecondMsg = Boolean(
+    selectedTool?.has_second_msg === 1 || 
+    selectedTool?.has_second_msg === true
+  )
+
   const isNg = Boolean(
     selectedToolKey?.toLowerCase().includes('nagad') || 
     selectedToolKey?.toLowerCase().includes('ng')
@@ -236,7 +241,6 @@ export default function UserDashboard({ session, onSignOut, onGoToHome }: UserDa
     selectedToolKey?.toLowerCase().includes('bkash') || 
     selectedToolKey?.toLowerCase().includes('bk')
   )
-  const isNgOrBk = isNg || isBk
 
   // 3. Generate screenshot by calling the connected API
   const handleGenerate = async (e: React.FormEvent) => {
@@ -269,8 +273,8 @@ export default function UserDashboard({ session, onSignOut, onGoToHome }: UserDa
         }
       })
 
-      // For bKash / Nagad statement receipts: auto-handle status bar time & 2nd message count
-      if (isNgOrBk) {
+      // For statement receipts with 2nd message support
+      if (toolHasSecondMsg) {
         const currentBdTime = getCurrentBdTime()
         urlObj.searchParams.set('time', formValues['time'] || currentBdTime)
         urlObj.searchParams.set('clock', formValues['time'] || currentBdTime)
@@ -576,8 +580,8 @@ export default function UserDashboard({ session, onSignOut, onGoToHome }: UserDa
                     </div>
                   </div>
 
-                  {/* 2nd Message Toggle Button for Nagad & bKash */}
-                  {isNgOrBk && (
+                  {/* 2nd Message Toggle Button - Only shown when tool has 2nd message enabled */}
+                  {toolHasSecondMsg && (
                     <div className="flex items-center justify-between p-3 rounded-xl bg-slate-900/90 border border-indigo-900/50">
                       <div className="flex items-center gap-2.5">
                         <div className="w-8 h-8 rounded-lg bg-indigo-950/80 border border-indigo-800/40 flex items-center justify-center text-indigo-400">
@@ -615,7 +619,7 @@ export default function UserDashboard({ session, onSignOut, onGoToHome }: UserDa
 
                   <form onSubmit={handleGenerate} className="space-y-4">
                     {/* Message 1 Header */}
-                    {isNgOrBk && showSecondMsg && (
+                    {toolHasSecondMsg && showSecondMsg && (
                       <div className="flex items-center gap-2 pb-1 border-b border-slate-800 text-xs font-extrabold text-indigo-400 uppercase tracking-wider">
                         <span>💬 1st Message Details (১ম মেসেজ)</span>
                       </div>
@@ -745,8 +749,8 @@ export default function UserDashboard({ session, onSignOut, onGoToHome }: UserDa
                         })
                     )}
 
-                    {/* Message 2 Dynamic Fields (Visible only when showSecondMsg is true) */}
-                    {isNgOrBk && showSecondMsg && (
+                    {/* Message 2 Dynamic Fields (Visible only when toolHasSecondMsg and showSecondMsg) */}
+                    {toolHasSecondMsg && showSecondMsg && (
                       <div className="space-y-4 pt-4 border-t border-dashed border-indigo-900/60 animate-fadeIn">
                         <div className="flex items-center justify-between pb-1 border-b border-slate-800">
                           <h3 className="text-xs font-extrabold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">

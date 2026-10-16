@@ -12,6 +12,7 @@ export interface DynamicService {
   category?: string
   is_active: number
   sort_order: number
+  has_second_msg?: number | boolean
 }
 
 export interface DynamicField {
