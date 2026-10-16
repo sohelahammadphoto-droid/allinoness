@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react'
 import { 
   ShieldCheck, UserPlus, Users, Key, LogOut, CheckCircle2, 
   XCircle, Plus, Trash2, Calendar, RefreshCw, Sliders, 
-  Settings, ChevronRight, Lock, Eye, EyeOff, Sparkles, Building2
+  Settings, ChevronRight, Lock, Eye, EyeOff, Sparkles, Building2,
+  Zap, Globe, Edit3, Layers
 } from 'lucide-react'
 import CountdownTimer from './CountdownTimer'
-import { AuthSession, TenantInfo, TenantUser, TemplateInfo, DynamicField } from '../types'
+import { AuthSession, TenantInfo, TenantUser, TemplateInfo, DynamicField, DynamicService } from '../types'
 
 interface AdminPortalProps {
   onBackToApp?: () => void
@@ -40,7 +41,7 @@ export default function AdminPortal({ onBackToApp }: AdminPortalProps) {
   const [isLoadingUsers, setIsLoadingUsers] = useState(false)
 
   // Super Admin data
-  const [superTab, setSuperTab] = useState<'tenants' | 'parameters'>('tenants')
+  const [superTab, setSuperTab] = useState<'tenants' | 'services' | 'parameters'>('services')
   const [tenantsList, setTenantsList] = useState<TenantInfo[]>([])
   const [isLoadingTenants, setIsLoadingTenants] = useState(false)
   const [isCreateTenantModalOpen, setIsCreateTenantModalOpen] = useState(false)
@@ -51,6 +52,18 @@ export default function AdminPortal({ onBackToApp }: AdminPortalProps) {
   const [newTenantPassword, setNewTenantPassword] = useState('')
   const [newTenantDays, setNewTenantDays] = useState('30')
   const [newTenantMaxUsers, setNewTenantMaxUsers] = useState('100')
+
+  // Dynamic Services (D1)
+  const [servicesList, setServicesList] = useState<DynamicService[]>([])
+  const [isLoadingServices, setIsLoadingServices] = useState(false)
+  const [isCreateServiceModalOpen, setIsCreateServiceModalOpen] = useState(false)
+  const [newServiceKey, setNewServiceKey] = useState('')
+  const [newServiceName, setNewServiceName] = useState('')
+  const [newServiceSubtitle, setNewServiceSubtitle] = useState('')
+  const [newServiceIconType, setNewServiceIconType] = useState<'emoji' | 'image_url'>('emoji')
+  const [newServiceIconVal, setNewServiceIconVal] = useState('⚡')
+  const [newServiceBgColor, setNewServiceBgColor] = useState('#4f46e5')
+  const [newServiceApiUrl, setNewServiceApiUrl] = useState('')
 
   // Dynamic Parameters (D1)
   const [templates, setTemplates] = useState<TemplateInfo[]>([])
@@ -141,14 +154,12 @@ export default function AdminPortal({ onBackToApp }: AdminPortalProps) {
     if (!session || session.role !== 'client_admin' || !session.tenant) return
     setIsLoadingUsers(true)
     try {
-      // 1. Subscription
       const subRes = await fetch(`/api/admin/subscription?tenant_id=${session.tenant.id}`)
       const subData = await subRes.json() as any
       if (subData.success) {
         setSubscription(subData.tenant)
       }
 
-      // 2. Users
       const usersRes = await fetch(`/api/admin/users?tenant_id=${session.tenant.id}`)
       const usersData = await usersRes.json() as any
       if (usersData.success) {
@@ -165,6 +176,7 @@ export default function AdminPortal({ onBackToApp }: AdminPortalProps) {
   const fetchSuperAdminData = async () => {
     if (!session || session.role !== 'superadmin') return
     setIsLoadingTenants(true)
+    setIsLoadingServices(true)
     try {
       // 1. Tenants
       const tenantsRes = await fetch('/api/super/tenants')
@@ -173,7 +185,14 @@ export default function AdminPortal({ onBackToApp }: AdminPortalProps) {
         setTenantsList(tenantsData.tenants)
       }
 
-      // 2. Templates with Dynamic Fields from D1
+      // 2. Services from D1
+      const servicesRes = await fetch('/api/services?all=true')
+      const servicesData = await servicesRes.json() as any
+      if (servicesData.success) {
+        setServicesList(servicesData.services)
+      }
+
+      // 3. Templates with Dynamic Fields from D1
       const tplRes = await fetch('/api/templates')
       const tplData = await tplRes.json() as any
       if (tplData.success) {
@@ -183,6 +202,7 @@ export default function AdminPortal({ onBackToApp }: AdminPortalProps) {
       console.error('Error fetching super admin data:', err)
     } finally {
       setIsLoadingTenants(false)
+      setIsLoadingServices(false)
     }
   }
 
@@ -240,7 +260,6 @@ export default function AdminPortal({ onBackToApp }: AdminPortalProps) {
       const data = await res.json() as any
       if (!res.ok) throw new Error(data.error || 'Failed to update user status')
 
-      // Optimistic update
       setUsers(prev => prev.map(u => u.id === user.id ? { ...u, is_banned: nextBanned } : u))
     } catch (err: any) {
       alert(err.message)
@@ -326,6 +345,54 @@ export default function AdminPortal({ onBackToApp }: AdminPortalProps) {
     }
   }
 
+  // Super Admin: Add Dynamic Service / API to D1
+  const handleAddService = async (e: React.FormEvent) => {
+    e.preventDefault()
+    try {
+      const res = await fetch('/api/services', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          service_key: newServiceKey.trim().toLowerCase(),
+          name: newServiceName.trim(),
+          subtitle: newServiceSubtitle.trim() || 'Payment & Statement',
+          icon_type: newServiceIconType,
+          icon_val: newServiceIconVal.trim(),
+          bg_color: newServiceBgColor.trim() || '#4f46e5',
+          api_url: newServiceApiUrl.trim() || `/${newServiceKey}`,
+          is_active: 1,
+        })
+      })
+
+      const data = await res.json() as any
+      if (!res.ok) throw new Error(data.error || 'Failed to save service')
+
+      alert(`Service "${newServiceName}" added! It now appears on the Home Page!`)
+      setIsCreateServiceModalOpen(false)
+      setNewServiceKey('')
+      setNewServiceName('')
+      setNewServiceSubtitle('')
+      setNewServiceIconVal('⚡')
+      setNewServiceApiUrl('')
+      fetchSuperAdminData()
+    } catch (err: any) {
+      alert(err.message)
+    }
+  }
+
+  // Super Admin: Delete Service from D1
+  const handleDeleteService = async (serviceId: number) => {
+    if (!confirm('Remove this service from the home page?')) return
+    try {
+      const res = await fetch(`/api/services?id=${serviceId}`, { method: 'DELETE' })
+      const data = await res.json() as any
+      if (!res.ok) throw new Error(data.error || 'Failed to delete service')
+      fetchSuperAdminData()
+    } catch (err: any) {
+      alert(err.message)
+    }
+  }
+
   // Super Admin: Add Dynamic Parameter to D1
   const handleAddDynamicField = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -399,7 +466,7 @@ export default function AdminPortal({ onBackToApp }: AdminPortalProps) {
           </div>
           <h2 className="text-2xl font-bold text-white tracking-tight">Admin & Client Portal</h2>
           <p className="text-xs text-slate-400 mt-1">
-            Access subscription countdown, user controls & dynamic templates
+            Access subscription countdown, user controls & dynamic services
           </p>
         </div>
 
@@ -768,7 +835,7 @@ export default function AdminPortal({ onBackToApp }: AdminPortalProps) {
                 MASTER
               </span>
             </h2>
-            <span className="text-xs text-slate-400">Monthly Licensing & Cloudflare D1 Parameter Studio</span>
+            <span className="text-xs text-slate-400">Dynamic Services & Monthly Licensing Studio</span>
           </div>
         </div>
 
@@ -781,34 +848,131 @@ export default function AdminPortal({ onBackToApp }: AdminPortalProps) {
         </button>
       </div>
 
-      {/* Mode Switcher: Client Admins vs Dynamic Parameters */}
-      <div className="flex bg-slate-900 p-1.5 rounded-2xl border border-slate-800">
+      {/* 3-Mode Switcher */}
+      <div className="flex bg-slate-900 p-1.5 rounded-2xl border border-slate-800 gap-1">
+        <button
+          onClick={() => setSuperTab('services')}
+          className={`flex-1 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition flex items-center justify-center gap-1.5 ${
+            superTab === 'services'
+              ? 'bg-indigo-600 text-white shadow-md'
+              : 'text-slate-400 hover:text-white'
+          }`}
+        >
+          <Globe className="w-4 h-4" />
+          <span>Dynamic Services & APIs ({servicesList.length})</span>
+        </button>
+
         <button
           onClick={() => setSuperTab('tenants')}
-          className={`flex-1 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition flex items-center justify-center gap-2 ${
+          className={`flex-1 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition flex items-center justify-center gap-1.5 ${
             superTab === 'tenants'
               ? 'bg-rose-600 text-white shadow-md'
               : 'text-slate-400 hover:text-white'
           }`}
         >
           <Building2 className="w-4 h-4" />
-          <span>Client Admins & Expiry ({tenantsList.length})</span>
+          <span>Client Admins ({tenantsList.length})</span>
         </button>
 
         <button
           onClick={() => setSuperTab('parameters')}
-          className={`flex-1 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition flex items-center justify-center gap-2 ${
+          className={`flex-1 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition flex items-center justify-center gap-1.5 ${
             superTab === 'parameters'
               ? 'bg-amber-500 text-black shadow-md'
               : 'text-slate-400 hover:text-white'
           }`}
         >
           <Sliders className="w-4 h-4" />
-          <span>Dynamic Parameters & Options (D1)</span>
+          <span>Parameters (D1)</span>
         </button>
       </div>
 
-      {/* TAB 1: CLIENT ADMINS & MONTHLY SUBSCRIPTION MANAGEMENT */}
+      {/* TAB 1: DYNAMIC SERVICES & APIS (Super Admin adds service name, icon, API to display on Home) */}
+      {superTab === 'services' && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-bold text-slate-200 flex items-center gap-2">
+                <Globe className="w-4 h-4 text-indigo-400" />
+                <span>Home Page Dynamic Services & Connected APIs</span>
+              </h3>
+              <p className="text-[11px] text-slate-400">
+                Services added here appear on the Home screen in real-time
+              </p>
+            </div>
+
+            <button
+              onClick={() => setIsCreateServiceModalOpen(true)}
+              className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-md shadow-indigo-600/20 active:scale-95"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add Dynamic Service</span>
+            </button>
+          </div>
+
+          {isLoadingServices ? (
+            <div className="py-12 text-center text-slate-400 text-xs flex items-center justify-center gap-2">
+              <RefreshCw className="w-4 h-4 animate-spin text-indigo-400" />
+              <span>Fetching dynamic services from Cloudflare D1...</span>
+            </div>
+          ) : servicesList.length === 0 ? (
+            <div className="py-12 text-center text-slate-400 text-xs bg-slate-900/50 rounded-2xl border border-slate-800">
+              No services added yet. Tap "Add Dynamic Service" to create your first API/Service card!
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {servicesList.map((service) => (
+                <div
+                  key={service.id}
+                  className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 shadow-lg flex items-center justify-between gap-3"
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="w-12 h-12 rounded-2xl flex items-center justify-center text-xl font-bold text-white shadow-md shrink-0"
+                      style={{ backgroundColor: service.bg_color || '#4f46e5' }}
+                    >
+                      {service.icon_val || '⚡'}
+                    </div>
+
+                    <div>
+                      <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                        <span>{service.name}</span>
+                        <span className="text-[10px] font-mono bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded">
+                          {service.service_key}
+                        </span>
+                      </h4>
+                      <span className="text-xs text-slate-400 block">{service.subtitle || 'Service'}</span>
+                      <span className="text-[10px] text-indigo-400 font-mono mt-0.5 block">
+                        Target: {service.api_url || `/${service.service_key}`}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                      service.is_active === 1
+                        ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                        : 'bg-rose-500/20 text-rose-400 border-rose-500/30'
+                    }`}>
+                      {service.is_active === 1 ? 'Live' : 'Hidden'}
+                    </span>
+
+                    <button
+                      onClick={() => handleDeleteService(service.id)}
+                      className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-950/40 transition"
+                      title="Delete Service"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB 2: CLIENT ADMINS & MONTHLY SUBSCRIPTION MANAGEMENT */}
       {superTab === 'tenants' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
@@ -860,7 +1024,6 @@ export default function AdminPortal({ onBackToApp }: AdminPortalProps) {
                     </span>
                   </div>
 
-                  {/* Countdown preview widget */}
                   <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800/80">
                     <div className="flex justify-between items-center text-[10px] text-slate-400 mb-1">
                       <span>Expires: {tenant.expires_at}</span>
@@ -876,7 +1039,6 @@ export default function AdminPortal({ onBackToApp }: AdminPortalProps) {
                     </div>
                   </div>
 
-                  {/* Stats & Actions */}
                   <div className="flex items-center justify-between pt-1">
                     <span className="text-xs text-slate-400">
                       👥 Users: <b className="text-white">{tenant.user_count || 0}</b> / {tenant.max_users}
@@ -908,10 +1070,9 @@ export default function AdminPortal({ onBackToApp }: AdminPortalProps) {
         </div>
       )}
 
-      {/* TAB 2: DYNAMIC PARAMETER BUILDER (SELECT & ADD OPTIONS VIA D1) */}
+      {/* TAB 3: DYNAMIC PARAMETER BUILDER */}
       {superTab === 'parameters' && (
         <div className="space-y-4">
-          {/* Template Selection Tabs */}
           <div className="flex bg-slate-900 p-1 rounded-xl border border-slate-800">
             <button
               onClick={() => setActiveParamTemplate('binance')}
@@ -953,7 +1114,6 @@ export default function AdminPortal({ onBackToApp }: AdminPortalProps) {
             </button>
           </div>
 
-          {/* Current Dynamic Fields List from D1 */}
           <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 shadow-xl space-y-3">
             {(() => {
               const currentTpl = templates.find(t => t.code === activeParamTemplate)
@@ -1014,6 +1174,124 @@ export default function AdminPortal({ onBackToApp }: AdminPortalProps) {
                 </div>
               )
             })()}
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: Create New Dynamic Service / API */}
+      {isCreateServiceModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-slate-900 border border-slate-700 rounded-2xl p-5 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
+                <Globe className="w-4 h-4 text-indigo-400" />
+                <span>Add Dynamic Service / API to Home Screen</span>
+              </h3>
+              <button 
+                onClick={() => setIsCreateServiceModalOpen(false)}
+                className="text-slate-400 hover:text-white"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleAddService} className="space-y-3">
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Service Key</label>
+                  <input
+                    type="text"
+                    value={newServiceKey}
+                    onChange={(e) => setNewServiceKey(e.target.value)}
+                    placeholder="e.g. rocket, upay, paypal"
+                    required
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Display Name</label>
+                  <input
+                    type="text"
+                    value={newServiceName}
+                    onChange={(e) => setNewServiceName(e.target.value)}
+                    placeholder="e.g. Rocket Pay"
+                    required
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">Subtitle</label>
+                <input
+                  type="text"
+                  value={newServiceSubtitle}
+                  onChange={(e) => setNewServiceSubtitle(e.target.value)}
+                  placeholder="e.g. Send Money & Cash Out"
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Icon Emoji or Image URL</label>
+                  <input
+                    type="text"
+                    value={newServiceIconVal}
+                    onChange={(e) => setNewServiceIconVal(e.target.value)}
+                    placeholder="e.g. 🚀 or 💳 or image URL"
+                    required
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Badge Background Color</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      value={newServiceBgColor}
+                      onChange={(e) => setNewServiceBgColor(e.target.value)}
+                      className="w-8 h-8 rounded-lg cursor-pointer bg-transparent border-0"
+                    />
+                    <input
+                      type="text"
+                      value={newServiceBgColor}
+                      onChange={(e) => setNewServiceBgColor(e.target.value)}
+                      className="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-2 py-1.5 text-xs text-white font-mono"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">Target Route / API URL</label>
+                <input
+                  type="text"
+                  value={newServiceApiUrl}
+                  onChange={(e) => setNewServiceApiUrl(e.target.value)}
+                  placeholder="e.g. /bk or /ng or /binance or https://api..."
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              <div className="pt-2 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsCreateServiceModalOpen(false)}
+                  className="flex-1 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-bold hover:bg-slate-700 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2 rounded-xl bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-500 transition"
+                >
+                  Save Service to D1
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
@@ -1191,7 +1469,6 @@ export default function AdminPortal({ onBackToApp }: AdminPortalProps) {
                 </div>
               </div>
 
-              {/* If select, provide options input */}
               {newFieldType === 'select' && (
                 <div>
                   <label className="block text-xs font-semibold text-amber-300 mb-1">

@@ -1,5 +1,19 @@
 export type TemplateType = 'binance' | 'bk' | 'ng'
 
+export interface DynamicService {
+  id: number
+  service_key: string
+  name: string
+  subtitle: string
+  icon_type: 'emoji' | 'image_url' | 'svg'
+  icon_val: string
+  bg_color: string
+  api_url?: string
+  category?: string
+  is_active: number
+  sort_order: number
+}
+
 export interface DynamicField {
   id: number
   template_code: string

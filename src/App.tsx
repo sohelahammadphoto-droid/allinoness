@@ -119,12 +119,26 @@ export default function App() {
   const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams()
   const hideNav = searchParams.get('hideNav') === 'true' || searchParams.get('clean') === '1'
 
-  // 1. HOME VIEW (Matches uploaded screenshot)
+  // 1. HOME VIEW (Matches uploaded screenshot - 100% dynamic services from D1)
+  const handleSelectService = (service: any) => {
+    if (service.service_key === 'bkash' || service.service_key === 'bk') {
+      handleSelectTemplate('bk')
+    } else if (service.service_key === 'nagad' || service.service_key === 'ng') {
+      handleSelectTemplate('ng')
+    } else if (service.service_key === 'binance') {
+      handleSelectTemplate('binance')
+    } else if (service.api_url && service.api_url.startsWith('http')) {
+      window.open(service.api_url, '_blank')
+    } else {
+      handleSelectTemplate('binance')
+    }
+  }
+
   if (currentView === 'home' && !hideNav) {
     return (
       <div className="min-h-screen bg-[#f8fafc]">
         <SkyFakePayHome
-          onSelectTemplate={handleSelectTemplate}
+          onSelectService={handleSelectService}
           onOpenAuth={() => setCurrentView('admin')}
           session={session}
         />
