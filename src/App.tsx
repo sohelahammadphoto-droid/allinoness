@@ -1,88 +1,97 @@
 import { useState, useEffect } from 'react'
+import SkyFakePayHome from './components/SkyFakePayHome'
 import BinanceReceipt from './components/BinanceReceipt'
 import BkashReceipt from './components/BkashReceipt'
 import NagadReceipt from './components/NagadReceipt'
 import AdminPortal from './components/AdminPortal'
-import MobileBottomNav, { NavTab } from './components/MobileBottomNav'
 import DynamicFormPanel from './components/DynamicFormPanel'
 import PwaInstallModal from './components/PwaInstallModal'
 import { toPng } from 'html-to-image'
-import { Smartphone, ShieldCheck, Download, Sparkles } from 'lucide-react'
+import { ArrowLeft, Zap, Download } from 'lucide-react'
+import { AuthSession } from './types'
 
+type AppView = 'home' | 'generator' | 'admin'
 type TemplateType = 'binance' | 'bk' | 'ng'
 
-function getActiveTemplate(): TemplateType {
-  if (typeof window === 'undefined') return 'binance'
+function getInitialState(): { view: AppView; template: TemplateType } {
+  if (typeof window === 'undefined') return { view: 'home', template: 'binance' }
 
   const pathname = window.location.pathname.toLowerCase()
   const searchParams = new URLSearchParams(window.location.search)
   const queryType = (searchParams.get('type') || searchParams.get('app') || '').toLowerCase()
 
   if (queryType === 'bk' || queryType === 'bkash' || pathname.startsWith('/bk')) {
-    return 'bk'
+    return { view: 'generator', template: 'bk' }
   }
   if (queryType === 'ng' || queryType === 'nagad' || pathname.startsWith('/ng')) {
-    return 'ng'
+    return { view: 'generator', template: 'ng' }
   }
   if (queryType === 'binance' || pathname.startsWith('/binance')) {
-    return 'binance'
+    return { view: 'generator', template: 'binance' }
   }
 
-  // Auto-detect based on parameter names
-  if (searchParams.has('usd') || searchParams.has('orderId')) return 'binance'
-  if (searchParams.has('fee')) return 'bk'
-  if (searchParams.has('metaTime1') || searchParams.has('meta1')) return 'ng'
+  // If specific receipt params exist, open generator directly
+  if (searchParams.has('usd') || searchParams.has('orderId')) {
+    return { view: 'generator', template: 'binance' }
+  }
+  if (searchParams.has('fee') || searchParams.has('sender')) {
+    return { view: 'generator', template: 'bk' }
+  }
+  if (searchParams.has('metaTime1') || searchParams.has('meta1')) {
+    return { view: 'generator', template: 'ng' }
+  }
 
-  return 'binance'
+  return { view: 'home', template: 'binance' }
 }
 
 export default function App() {
-  const [activeTemplate, setActiveTemplate] = useState<TemplateType>(getActiveTemplate)
-  const [activeTab, setActiveTab] = useState<NavTab>('generator')
+  const initial = getInitialState()
+  const [currentView, setCurrentView] = useState<AppView>(initial.view)
+  const [activeTemplate, setActiveTemplate] = useState<TemplateType>(initial.template)
   const [isInstallModalOpen, setIsInstallModalOpen] = useState(false)
   const [isDownloading, setIsDownloading] = useState(false)
-  const [hasAdminSession, setHasAdminSession] = useState(false)
+  const [session, setSession] = useState<AuthSession | null>(null)
 
-  // Check admin session
+  // Load session from localStorage
   useEffect(() => {
     try {
-      const session = localStorage.getItem('receipt_app_auth')
-      setHasAdminSession(!!session)
-    } catch {
-      setHasAdminSession(false)
-    }
-  }, [activeTab])
+      const stored = localStorage.getItem('receipt_app_auth')
+      if (stored) setSession(JSON.parse(stored))
+    } catch {}
+  }, [currentView])
 
-  // URL sync
+  // Handle URL changes
   useEffect(() => {
     const handleUrlChange = () => {
-      setActiveTemplate(getActiveTemplate())
+      const updated = getInitialState()
+      setCurrentView(updated.view)
+      setActiveTemplate(updated.template)
     }
     window.addEventListener('popstate', handleUrlChange)
     return () => window.removeEventListener('popstate', handleUrlChange)
   }, [])
 
-  const switchTemplate = (tpl: TemplateType) => {
-    setActiveTemplate(tpl)
+  // Select Template from Home
+  const handleSelectTemplate = (template: TemplateType) => {
+    setActiveTemplate(template)
+    setCurrentView('generator')
     const currentUrl = new URL(window.location.href)
-    currentUrl.searchParams.set('type', tpl)
+    currentUrl.searchParams.set('type', template)
     window.history.pushState({}, '', currentUrl.toString())
   }
 
-  // Handle Tab Select
-  const handleSelectTab = (tab: NavTab) => {
-    if (tab === 'install') {
-      setIsInstallModalOpen(true)
-    } else {
-      setActiveTab(tab)
-    }
+  // Go back to Home
+  const handleGoHome = () => {
+    setCurrentView('home')
+    const currentUrl = new URL(window.location.href)
+    currentUrl.searchParams.delete('type')
+    window.history.pushState({}, '', currentUrl.toString())
   }
 
-  // 1-Click High-Res PNG Download
+  // Global Download
   const handleGlobalDownload = async () => {
     setIsDownloading(true)
     try {
-      // Find the card container
       const cardEl = document.querySelector('#receipt-card, #binance-card, .phone, .screen-frame') as HTMLElement
       if (!cardEl) {
         alert('Receipt card element not found for capture.')
@@ -110,106 +119,131 @@ export default function App() {
   const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams()
   const hideNav = searchParams.get('hideNav') === 'true' || searchParams.get('clean') === '1'
 
+  // 1. HOME VIEW (Matches uploaded screenshot)
+  if (currentView === 'home' && !hideNav) {
+    return (
+      <div className="min-h-screen bg-[#f8fafc]">
+        <SkyFakePayHome
+          onSelectTemplate={handleSelectTemplate}
+          onOpenAuth={() => setCurrentView('admin')}
+          session={session}
+        />
+        <PwaInstallModal
+          isOpen={isInstallModalOpen}
+          onClose={() => setIsInstallModalOpen(false)}
+        />
+      </div>
+    )
+  }
+
+  // 2. ADMIN PORTAL VIEW
+  if (currentView === 'admin' && !hideNav) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-white flex flex-col">
+        {/* Top Header */}
+        <header className="sticky top-0 z-30 bg-slate-950/90 backdrop-blur-md px-4 py-3 flex items-center justify-between border-b border-slate-800">
+          <button
+            onClick={handleGoHome}
+            className="flex items-center gap-1.5 text-xs font-bold text-slate-300 hover:text-white px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 transition"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Home</span>
+          </button>
+
+          <span className="text-sm font-extrabold text-white">
+            Admin & Client Portal
+          </span>
+
+          <div className="w-16" />
+        </header>
+
+        <main className="flex-1 flex justify-center items-start">
+          <AdminPortal onBackToApp={handleGoHome} />
+        </main>
+      </div>
+    )
+  }
+
+  // 3. GENERATOR VIEW (bKash / Nagad / Binance receipt screen with form & download)
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-amber-400 selection:text-black">
-      {/* Top Mobile App Header */}
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
+      {/* Generator Top App Header */}
       {!hideNav && (
         <header className="sticky top-0 z-40 bg-slate-950/90 backdrop-blur-xl border-b border-slate-800/80 px-4 py-2.5 shadow-sm flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-amber-500 to-rose-500 flex items-center justify-center shadow-md shadow-amber-500/20 font-black text-black text-sm">
-              ⚡
-            </div>
-            <div>
-              <span className="font-extrabold text-white text-sm sm:text-base tracking-tight block">
-                Receipt Studio
-              </span>
-              <span className="text-[10px] text-amber-400 font-semibold flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                Cloudflare D1 Online
-              </span>
-            </div>
+          <button
+            onClick={handleGoHome}
+            className="flex items-center gap-1.5 text-xs font-bold text-slate-300 hover:text-white px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 transition cursor-pointer"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Home</span>
+          </button>
+
+          {/* Service Switcher */}
+          <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-xl border border-slate-800">
+            <button
+              onClick={() => handleSelectTemplate('bk')}
+              className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                activeTemplate === 'bk'
+                  ? 'bg-[#e2136e] text-white shadow-sm'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <span>🌸</span>
+              <span className="hidden sm:inline">bKash</span>
+            </button>
+
+            <button
+              onClick={() => handleSelectTemplate('ng')}
+              className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                activeTemplate === 'ng'
+                  ? 'bg-[#f6921e] text-white shadow-sm'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <span>🟠</span>
+              <span className="hidden sm:inline">Nagad</span>
+            </button>
+
+            <button
+              onClick={() => handleSelectTemplate('binance')}
+              className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                activeTemplate === 'binance'
+                  ? 'bg-amber-400 text-black shadow-sm'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <span>🟡</span>
+              <span className="hidden sm:inline">Binance</span>
+            </button>
           </div>
 
-          {/* Template Switcher (only in generator tab) */}
-          {activeTab === 'generator' ? (
-            <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-xl border border-slate-800">
-              <button
-                onClick={() => switchTemplate('binance')}
-                className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
-                  activeTemplate === 'binance'
-                    ? 'bg-amber-400 text-black shadow-sm'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <span>🟡</span>
-                <span className="hidden sm:inline">Binance</span>
-              </button>
-
-              <button
-                onClick={() => switchTemplate('bk')}
-                className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
-                  activeTemplate === 'bk'
-                    ? 'bg-[#e2136e] text-white shadow-sm'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <span>🌸</span>
-                <span className="hidden sm:inline">bKash</span>
-              </button>
-
-              <button
-                onClick={() => switchTemplate('ng')}
-                className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
-                  activeTemplate === 'ng'
-                    ? 'bg-[#f6921e] text-white shadow-sm'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <span>🟠</span>
-                <span className="hidden sm:inline">Nagad</span>
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={() => setActiveTab('generator')}
-              className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 text-xs font-bold transition"
-            >
-              ← Back to App
-            </button>
-          )}
+          {/* Admin shortcut */}
+          <button
+            onClick={() => setCurrentView('admin')}
+            className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition cursor-pointer"
+          >
+            Admin
+          </button>
         </header>
       )}
 
-      {/* Main App Content */}
+      {/* Main Content Area */}
       <main className="flex-1 flex flex-col justify-center items-center p-2 sm:p-4 pb-28">
-        {activeTab === 'generator' ? (
-          <div className="w-full flex flex-col items-center">
-            {activeTemplate === 'binance' && <BinanceReceipt hideControls={hideNav} />}
-            {activeTemplate === 'bk' && <BkashReceipt hideControls={hideNav} />}
-            {activeTemplate === 'ng' && <NagadReceipt hideControls={hideNav} />}
+        <div className="w-full flex flex-col items-center">
+          {activeTemplate === 'binance' && <BinanceReceipt hideControls={hideNav} />}
+          {activeTemplate === 'bk' && <BkashReceipt hideControls={hideNav} />}
+          {activeTemplate === 'ng' && <NagadReceipt hideControls={hideNav} />}
 
-            {/* Dynamic Form Panel for Live Data customization & 1-tap download */}
-            {!hideNav && (
-              <DynamicFormPanel
-                activeTemplate={activeTemplate}
-                onDownload={handleGlobalDownload}
-                isDownloading={isDownloading}
-              />
-            )}
-          </div>
-        ) : (
-          <AdminPortal onBackToApp={() => setActiveTab('generator')} />
-        )}
+          {/* Dynamic Form Panel for Live Data customization & 1-tap download */}
+          {!hideNav && (
+            <DynamicFormPanel
+              activeTemplate={activeTemplate}
+              onDownload={handleGlobalDownload}
+              isDownloading={isDownloading}
+            />
+          )}
+        </div>
       </main>
-
-      {/* Mobile Bottom Navigation Bar */}
-      {!hideNav && (
-        <MobileBottomNav
-          activeTab={activeTab}
-          onSelectTab={handleSelectTab}
-          hasAdminSession={hasAdminSession}
-        />
-      )}
 
       {/* PWA Install Modal */}
       <PwaInstallModal
