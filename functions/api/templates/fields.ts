@@ -97,12 +97,29 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   }
 };
 
-// DELETE /api/templates/fields?id=... - Delete dynamic parameter
+// DELETE /api/templates/fields?id=... or ?all=true - Delete dynamic parameter(s)
 export const onRequestDelete: PagesFunction<Env> = async (context) => {
   try {
     const db = context.env.DB;
     const url = new URL(context.request.url);
     const id = url.searchParams.get('id');
+    const templateCode = url.searchParams.get('template_code');
+    const clearAll = url.searchParams.get('all') === 'true';
+
+    if (clearAll) {
+      await db.prepare('DELETE FROM template_fields').run();
+      await db.prepare('DELETE FROM templates').run();
+      return new Response(JSON.stringify({ success: true, message: 'All default templates and fields cleared from D1' }), {
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (templateCode) {
+      await db.prepare('DELETE FROM template_fields WHERE template_code = ?').bind(templateCode).run();
+      return new Response(JSON.stringify({ success: true, message: `All fields for ${templateCode} removed` }), {
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
 
     if (!id) {
       return new Response(JSON.stringify({ error: 'Missing field id' }), { status: 400 });

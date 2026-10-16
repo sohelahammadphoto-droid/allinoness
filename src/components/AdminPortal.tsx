@@ -52,7 +52,7 @@ export default function AdminPortal({ onBackToApp, session, onLogout }: AdminPor
 
   // Dynamic Parameters (D1)
   const [templates, setTemplates] = useState<TemplateInfo[]>([])
-  const [activeParamTemplate, setActiveParamTemplate] = useState<'binance' | 'bkash' | 'nagad'>('binance')
+  const [activeParamTemplate, setActiveParamTemplate] = useState<string>('')
   const [isAddFieldModalOpen, setIsAddFieldModalOpen] = useState(false)
   const [newFieldKey, setNewFieldKey] = useState('')
   const [newFieldLabel, setNewFieldLabel] = useState('')
@@ -875,59 +875,74 @@ export default function AdminPortal({ onBackToApp, session, onLogout }: AdminPor
       {/* TAB 3: DYNAMIC PARAMETER BUILDER */}
       {superTab === 'parameters' && (
         <div className="space-y-4">
-          <div className="flex bg-slate-900 p-1 rounded-xl border border-slate-800">
-            <button
-              onClick={() => setActiveParamTemplate('binance')}
-              className={`flex-1 py-2 text-xs font-bold rounded-lg transition ${
-                activeParamTemplate === 'binance' ? 'bg-amber-400 text-black' : 'text-slate-400'
-              }`}
-            >
-              🟡 Binance Pay
-            </button>
-            <button
-              onClick={() => setActiveParamTemplate('bkash')}
-              className={`flex-1 py-2 text-xs font-bold rounded-lg transition ${
-                activeParamTemplate === 'bkash' ? 'bg-[#e2136e] text-white' : 'text-slate-400'
-              }`}
-            >
-              🌸 bKash
-            </button>
-            <button
-              onClick={() => setActiveParamTemplate('nagad')}
-              className={`flex-1 py-2 text-xs font-bold rounded-lg transition ${
-                activeParamTemplate === 'nagad' ? 'bg-[#f6921e] text-white' : 'text-slate-400'
-              }`}
-            >
-              🟠 Nagad
-            </button>
-          </div>
+          {servicesList.length === 0 ? (
+            <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-10 text-center space-y-4">
+              <div className="w-14 h-14 rounded-2xl bg-amber-500/10 text-amber-400 mx-auto flex items-center justify-center">
+                <Sliders className="w-7 h-7" />
+              </div>
+              <h3 className="text-base font-bold text-white">No Connected Services / APIs Yet</h3>
+              <p className="text-xs text-slate-400 max-w-md mx-auto leading-relaxed">
+                All default templates (Binance, bKash, Nagad) have been removed. Add your custom Service or API from the "Dynamic Services & APIs" tab first. Then you can configure custom parameters here.
+              </p>
+              <button
+                onClick={() => setSuperTab('services')}
+                className="py-2.5 px-5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition cursor-pointer"
+              >
+                Go to Dynamic Services
+              </button>
+            </div>
+          ) : (
+            <>
+              {/* Dynamic Service Switcher Tabs */}
+              <div className="flex flex-wrap bg-slate-900 p-1.5 rounded-xl border border-slate-800 gap-1.5">
+                {servicesList.map((srv) => (
+                  <button
+                    key={srv.id}
+                    onClick={() => setActiveParamTemplate(srv.service_key)}
+                    className={`px-3.5 py-2 text-xs font-bold rounded-lg transition flex items-center gap-1.5 cursor-pointer ${
+                      (activeParamTemplate || servicesList[0]?.service_key) === srv.service_key
+                        ? 'bg-amber-500 text-black shadow-md'
+                        : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                    }`}
+                  >
+                    <span>{srv.icon_val || '⚡'}</span>
+                    <span>{srv.name}</span>
+                  </button>
+                ))}
+              </div>
 
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-slate-200">
-              Dynamic Parameters & Select Options for {activeParamTemplate.toUpperCase()}
-            </h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-bold text-slate-200">
+                  Dynamic Parameters & Options for {(activeParamTemplate || servicesList[0]?.service_key || '').toUpperCase()}
+                </h3>
 
-            <button
-              onClick={() => setIsAddFieldModalOpen(true)}
-              className="px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold transition flex items-center gap-1.5 shadow-md shadow-amber-500/20 active:scale-95"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Add Dynamic Option / Field</span>
-            </button>
-          </div>
+                <button
+                  onClick={() => {
+                    if (!activeParamTemplate && servicesList.length > 0) {
+                      setActiveParamTemplate(servicesList[0].service_key)
+                    }
+                    setIsAddFieldModalOpen(true)
+                  }}
+                  className="px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold transition flex items-center gap-1.5 shadow-md shadow-amber-500/20 active:scale-95 cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add Dynamic Option / Field</span>
+                </button>
+              </div>
 
-          <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 shadow-xl space-y-3">
-            {(() => {
-              const currentTpl = templates.find(t => t.code === activeParamTemplate)
-              const fields = currentTpl?.fields || []
+              <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 shadow-xl space-y-3">
+                {(() => {
+                  const targetCode = activeParamTemplate || servicesList[0]?.service_key
+                  const currentTpl = templates.find(t => t.code === targetCode)
+                  const fields = currentTpl?.fields || []
 
-              if (fields.length === 0) {
-                return (
-                  <div className="py-8 text-center text-slate-400 text-xs">
-                    No dynamic fields found for this template in D1.
-                  </div>
-                )
-              }
+                  if (fields.length === 0) {
+                    return (
+                      <div className="py-8 text-center text-slate-400 text-xs">
+                        No dynamic parameters added for this API yet. Click "Add Dynamic Option / Field" above to configure parameter keys.
+                      </div>
+                    )
+                  }
 
               return (
                 <div className="space-y-2">
@@ -977,8 +992,10 @@ export default function AdminPortal({ onBackToApp, session, onLogout }: AdminPor
               )
             })()}
           </div>
-        </div>
+        </>
       )}
+    </div>
+  )}
 
       {/* MODAL: Create New Dynamic Service / API */}
       {isCreateServiceModalOpen && (
