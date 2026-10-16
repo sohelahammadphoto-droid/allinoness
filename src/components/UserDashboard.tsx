@@ -155,6 +155,11 @@ export default function UserDashboard({ session, onSignOut, onGoToHome }: UserDa
         }
       })
 
+      // Sync clock alias if time is provided
+      if (formValues['time']) {
+        urlObj.searchParams.set('clock', formValues['time'])
+      }
+
       // If 2nd message is toggled ON, attach 2nd message params & count=2
       if (isNgOrBk && showSecondMsg) {
         urlObj.searchParams.set('count', '2')
@@ -164,6 +169,9 @@ export default function UserDashboard({ session, onSignOut, onGoToHome }: UserDa
             urlObj.searchParams.set(k, v)
           }
         })
+        if (secondMsgValues['time2']) {
+          urlObj.searchParams.set('clock2', secondMsgValues['time2'])
+        }
       } else {
         urlObj.searchParams.set('count', '1')
         urlObj.searchParams.delete('msgCount')
@@ -173,6 +181,8 @@ export default function UserDashboard({ session, onSignOut, onGoToHome }: UserDa
         urlObj.searchParams.delete('ref2')
         urlObj.searchParams.delete('balance2')
         urlObj.searchParams.delete('fee2')
+        urlObj.searchParams.delete('time2')
+        urlObj.searchParams.delete('clock2')
         urlObj.searchParams.delete('date2')
       }
 
@@ -585,6 +595,35 @@ export default function UserDashboard({ session, onSignOut, onGoToHome }: UserDa
                             />
                           </div>
                         )}
+
+                        {/* 2nd Time & Date Grid */}
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1.5">
+                            <label className="block text-xs font-bold text-slate-300">
+                              2nd Time (সময়)
+                            </label>
+                            <input
+                              type="text"
+                              value={secondMsgValues['time2'] || ''}
+                              onChange={(e) => handleSecondMsgChange('time2', e.target.value)}
+                              placeholder="e.g. 19:05"
+                              className="w-full bg-[#070b14] border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition"
+                            />
+                          </div>
+
+                          <div className="space-y-1.5">
+                            <label className="block text-xs font-bold text-slate-300">
+                              2nd Date (তারিখ)
+                            </label>
+                            <input
+                              type="text"
+                              value={secondMsgValues['date2'] || ''}
+                              onChange={(e) => handleSecondMsgChange('date2', e.target.value)}
+                              placeholder="e.g. 16/10/2026 19:05"
+                              className="w-full bg-[#070b14] border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition"
+                            />
+                          </div>
+                        </div>
                       </div>
                     )}
 
