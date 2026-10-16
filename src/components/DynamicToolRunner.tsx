@@ -34,10 +34,11 @@ export default function DynamicToolRunner({ toolSlug, onBack }: DynamicToolRunne
           }))
           setFields(fList)
 
-          // Initial values
+          // Initial values with clean placeholder defaults
           const initialVals: Record<string, string> = {}
           fList.forEach(f => {
-            initialVals[f.field_key] = ''
+            const rawPl = f.placeholder || ''
+            initialVals[f.field_key] = rawPl.replace(/^e\.g\.\s*/i, '').trim()
           })
           setFormValues(initialVals)
         } else {
@@ -71,22 +72,29 @@ export default function DynamicToolRunner({ toolSlug, onBack }: DynamicToolRunne
         throw new Error('এই টুলে কোনো Target API URL সেট করা নেই। অ্যাডমিন প্যানেল থেকে API লিঙ্ক যোগ করুন।')
       }
 
-      // Check if target URL is relative or absolute
-      const queryParams = new URLSearchParams()
+      // Safely parse URL and apply form parameters
+      const urlObj = new URL(targetUrl, window.location.origin)
       Object.entries(formValues).forEach(([k, v]) => {
-        if (v) queryParams.set(k, v)
+        if (v !== undefined && v !== null && v !== '') {
+          urlObj.searchParams.set(k, v)
+        }
       })
+      const finalUrl = urlObj.toString()
 
-      let finalUrl = targetUrl
-      if (finalUrl.includes('?')) {
-        finalUrl += `&${queryParams.toString()}`
-      } else {
-        finalUrl += `?${queryParams.toString()}`
+      // Fetch via backend proxy to bypass browser CORS restrictions
+      const proxyUrl = `/api/proxy?url=${encodeURIComponent(finalUrl)}`
+      
+      let res: Response
+      try {
+        res = await fetch(proxyUrl)
+      } catch (proxyErr) {
+        res = await fetch(finalUrl)
       }
 
-      const res = await fetch(finalUrl, {
-        method: 'GET',
-      })
+      if (!res.ok) {
+        const errText = await res.text()
+        throw new Error(`API Error (${res.status}): ${errText || res.statusText}`)
+      }
 
       const contentType = res.headers.get('content-type') || ''
 
