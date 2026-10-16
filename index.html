@@ -26,22 +26,19 @@
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
     <script>
-      // Clear legacy caches and register latest SW
+      // Immediately unregister all service workers to ensure fresh bundles
       if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.getRegistrations().then((registrations) => {
-            for (let reg of registrations) {
-              reg.update();
-            }
-          });
-          if ('caches' in window) {
-            caches.keys().then((names) => {
-              for (let name of names) {
-                if (name !== 'dark-ss-v10-fresh') {
-                  caches.delete(name);
-                }
-              }
-            });
+        navigator.serviceWorker.getRegistrations().then((registrations) => {
+          for (let reg of registrations) {
+            reg.unregister();
+          }
+        });
+      }
+      // Wipe cache storage so browser never serves old cached html/js
+      if ('caches' in window) {
+        caches.keys().then((names) => {
+          for (let name of names) {
+            caches.delete(name);
           }
         });
       }

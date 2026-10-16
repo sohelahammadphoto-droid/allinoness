@@ -81,6 +81,7 @@ export interface AuthSession {
     username: string
     name?: string
     full_name?: string
+    tenant_name?: string
   }
   tenant?: TenantInfo
   isExpired?: boolean

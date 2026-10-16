@@ -252,7 +252,11 @@ export default function App() {
 
               <div className="flex flex-col lg:flex-row gap-6 items-start justify-center">
                 <div className="w-full lg:w-80 shrink-0">
-                  <DynamicFormPanel templateType={activeTemplate} />
+                  <DynamicFormPanel 
+                    activeTemplate={activeTemplate} 
+                    onDownload={handleGlobalDownload}
+                    isDownloading={isDownloading}
+                  />
                 </div>
                 <div className="flex-1 flex justify-center w-full overflow-x-auto p-2">
                   {activeTemplate === 'binance' && <BinanceReceipt />}
