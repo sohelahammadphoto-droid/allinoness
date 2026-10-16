@@ -159,10 +159,7 @@ export default function DynamicToolRunner({ toolSlug, onBack }: DynamicToolRunne
           <span>Back</span>
         </button>
         <div className="flex items-center gap-2">
-          <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-            {tool.category?.toUpperCase() || 'TOOL'}
-          </span>
-          <span className="text-xs font-mono text-slate-400">/{tool.service_key}</span>
+          <span className="text-xs font-mono text-indigo-400 font-bold bg-indigo-950/50 px-2.5 py-1 rounded-lg border border-indigo-900/50">/{tool.service_key}</span>
         </div>
       </div>
 
@@ -225,13 +222,6 @@ export default function DynamicToolRunner({ toolSlug, onBack }: DynamicToolRunne
                 </>
               )}
             </button>
-
-            {tool.icon_val && tool.icon_val.length > 3 && (
-              <div className="p-3 rounded-xl bg-amber-950/30 border border-amber-900/40 text-[11px] text-amber-300/90 text-center flex items-center justify-center gap-1.5">
-                <AlertTriangle className="w-4 h-4 shrink-0 text-amber-400" />
-                <span>{tool.icon_val}</span>
-              </div>
-            )}
           </form>
         </div>
 

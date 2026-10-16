@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { 
   Plus, Trash2, ArrowLeft, Save, Sparkles, Check, 
-  ExternalLink, Edit3, Eye, AlertTriangle, Layers, Zap
+  ExternalLink, Edit3, Eye, Layers, Zap
 } from 'lucide-react'
 
 export interface ApiParameter {
@@ -18,9 +18,9 @@ export interface ApiTool {
   service_key: string
   name: string
   subtitle?: string // button name
-  category: 'free' | 'premium' | 'vip'
+  category?: string
   api_url: string
-  icon_val?: string // caption
+  icon_val?: string
   is_active: number
   fields?: any[]
 }
@@ -35,10 +35,8 @@ export default function DynamicApiToolGenerator({ onBackToDashboard, onOpenTool 
   const [editingId, setEditingId] = useState<number | null>(null)
   const [toolTitle, setToolTitle] = useState('Vercel Receipt Generator')
   const [toolSlug, setToolSlug] = useState('receipt')
-  const [category, setCategory] = useState<'free' | 'premium' | 'vip'>('free')
   const [buttonName, setButtonName] = useState('Fake Screenshot')
   const [targetApiUrl, setTargetApiUrl] = useState('')
-  const [caption, setCaption] = useState('⚠️ এই ছবিটি শুধুমাত্র মজার জন্য, কোনো অবৈধ কাজে ব্যবহার করবেন না।')
   const [isActive, setIsActive] = useState(true)
 
   // Dynamic Parameters list
@@ -121,10 +119,8 @@ export default function DynamicApiToolGenerator({ onBackToDashboard, onOpenTool 
     setEditingId(tool.id || null)
     setToolTitle(tool.name)
     setToolSlug(tool.service_key)
-    setCategory((tool.category as any) || 'free')
     setButtonName(tool.subtitle || 'Fake Screenshot')
     setTargetApiUrl(tool.api_url || '')
-    setCaption(tool.icon_val || '⚠️ এই ছবিটি শুধুমাত্র মজার জন্য, কোনো অবৈধ কাজে ব্যবহার করবেন না।')
     setIsActive(tool.is_active === 1)
 
     if (Array.isArray(tool.fields) && tool.fields.length > 0) {
@@ -148,10 +144,8 @@ export default function DynamicApiToolGenerator({ onBackToDashboard, onOpenTool 
     setEditingId(null)
     setToolTitle('')
     setToolSlug('')
-    setCategory('free')
     setButtonName('Fake Screenshot')
     setTargetApiUrl('')
-    setCaption('⚠️ এই ছবিটি শুধুমাত্র মজার জন্য, কোনো অবৈধ কাজে ব্যবহার করবেন না।')
     setIsActive(true)
     setParameters([
       {
@@ -183,11 +177,11 @@ export default function DynamicApiToolGenerator({ onBackToDashboard, onOpenTool 
         service_key: toolSlug.trim().toLowerCase(),
         name: toolTitle.trim(),
         subtitle: buttonName.trim() || 'Fake Screenshot',
-        category: category,
+        category: 'free',
         api_url: targetApiUrl.trim(),
-        caption: caption.trim(),
+        caption: '',
         icon_type: 'emoji',
-        icon_val: caption.trim() || '⚡',
+        icon_val: '⚡',
         is_active: isActive ? 1 : 0,
         sort_order: 1,
         parameters: parameters.filter(p => p.field_key.trim().length > 0).map((p, idx) => ({
@@ -334,43 +328,25 @@ export default function DynamicApiToolGenerator({ onBackToDashboard, onOpenTool 
               </div>
             </div>
 
-            {/* 3 & 4: Category & Button Name */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1">
-                  ৩. ক্যাটাগরি (Category):
-                </label>
-                <select
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value as any)}
-                  className="w-full bg-[#080d1a] border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-indigo-500 transition"
-                >
-                  <option value="free">Free (ফ্রি ইউজার)</option>
-                  <option value="premium">Premium (প্রিমিয়াম ইউজার)</option>
-                  <option value="vip">VIP (ভিআইপি স্পেশাল)</option>
-                </select>
-                <p className="text-[10px] text-slate-500 mt-1">Free নাকি Premium ইউজারদের জন্য অ্যাক্সেস থাকবে।</p>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1">
-                  ৪. জেনারেট বাটন নেম (Button Name):
-                </label>
-                <input
-                  type="text"
-                  value={buttonName}
-                  onChange={(e) => setButtonName(e.target.value)}
-                  placeholder="Fake Screenshot"
-                  className="w-full bg-[#080d1a] border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition"
-                />
-                <p className="text-[10px] text-slate-500 mt-1">রিসিট/ছবি তৈরির জন্য বাটনের টেক্সট।</p>
-              </div>
-            </div>
-
-            {/* 5: Target API URL */}
+            {/* 3: Button Name */}
             <div>
               <label className="block text-xs font-bold text-slate-300 mb-1">
-                ৫. টার্গেট API URL (Target API Address):
+                ৩. জেনারেট বাটন নেম (Button Name):
+              </label>
+              <input
+                type="text"
+                value={buttonName}
+                onChange={(e) => setButtonName(e.target.value)}
+                placeholder="Fake Screenshot"
+                className="w-full bg-[#080d1a] border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition"
+              />
+              <p className="text-[10px] text-slate-500 mt-1">রিসিট/ছবি তৈরির জন্য বাটনের টেক্সট।</p>
+            </div>
+
+            {/* 4: Target API URL */}
+            <div>
+              <label className="block text-xs font-bold text-slate-300 mb-1">
+                ৪. টার্গেট API URL (Target API Address):
               </label>
               <input
                 type="text"
@@ -384,12 +360,12 @@ export default function DynamicApiToolGenerator({ onBackToDashboard, onOpenTool 
               </p>
             </div>
 
-            {/* 6: Dynamic Form Fields / Parameters Builder */}
+            {/* 5: Dynamic Form Fields / Parameters Builder */}
             <div className="pt-2">
               <div className="flex items-center justify-between mb-2">
                 <div>
                   <label className="block text-xs font-bold text-slate-300">
-                    ৬. ফর্ম ইনপুট ফিল্ড ও এপিআই প্যারামিটারসমূহ (Dynamic Builder):
+                    ৫. ফর্ম ইনপুট ফিল্ড ও এপিআই প্যারামিটারসমূহ (Dynamic Builder):
                   </label>
                   <p className="text-[10px] text-slate-500">
                     যতগুলো প্যারামিটার প্রয়োজন, নিচে ➕ Add Parameter দিয়ে যোগ করুন।
@@ -492,21 +468,7 @@ export default function DynamicApiToolGenerator({ onBackToDashboard, onOpenTool 
               </div>
             </div>
 
-            {/* 7: Telegram Caption */}
-            <div>
-              <label className="block text-xs font-bold text-slate-300 mb-1">
-                ৭. টেলিগ্রাম ক্যাপশন মেসেজ (Telegram Image Caption / Note):
-              </label>
-              <textarea
-                rows={2}
-                value={caption}
-                onChange={(e) => setCaption(e.target.value)}
-                placeholder="⚠️ এই ছবিটি শুধুমাত্র মজার জন্য, কোনো অবৈধ কাজে ব্যবহার করবেন না।"
-                className="w-full bg-[#080d1a] border border-slate-700/80 rounded-xl px-3.5 py-2 text-xs text-amber-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition"
-              />
-            </div>
-
-            {/* 8: Active checkbox */}
+            {/* 6: Active checkbox */}
             <div className="flex items-center gap-2 pt-1">
               <input
                 type="checkbox"
@@ -516,7 +478,7 @@ export default function DynamicApiToolGenerator({ onBackToDashboard, onOpenTool 
                 className="w-4 h-4 rounded border-slate-700 text-indigo-600 focus:ring-0 cursor-pointer"
               />
               <label htmlFor="active_status" className="text-xs font-bold text-slate-200 cursor-pointer">
-                এই পেজটি চালু রাখুন (Active)
+                ৬. এই পেজটি চালু রাখুন (Active)
               </label>
             </div>
 
@@ -568,9 +530,6 @@ export default function DynamicApiToolGenerator({ onBackToDashboard, onOpenTool 
             {/* Preview Card */}
             <div className="bg-[#080d1a] border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-inner">
               <div className="text-center space-y-1 mb-4">
-                <span className="inline-block text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                  {category === 'free' ? 'FREE TOOL' : category === 'premium' ? 'PREMIUM TOOL' : 'VIP TOOL'}
-                </span>
                 <h4 className="text-base font-black text-white tracking-tight">
                   {toolTitle || 'আপনার পেজের শিরোনাম'}
                 </h4>
@@ -611,14 +570,6 @@ export default function DynamicApiToolGenerator({ onBackToDashboard, onOpenTool 
                 <span>🚀</span>
                 <span>{buttonName || 'Fake Screenshot'}</span>
               </button>
-
-              {/* Telegram Caption Preview */}
-              {caption && (
-                <div className="mt-3 p-2.5 rounded-xl bg-amber-950/30 border border-amber-900/40 text-[10px] text-amber-300/90 text-center flex items-center justify-center gap-1.5">
-                  <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-amber-400" />
-                  <span>{caption}</span>
-                </div>
-              )}
             </div>
           </div>
 
@@ -648,7 +599,6 @@ export default function DynamicApiToolGenerator({ onBackToDashboard, onOpenTool 
                   <thead>
                     <tr className="border-b border-slate-800 text-slate-400 text-[11px]">
                       <th className="pb-2 font-bold">Title / Slug</th>
-                      <th className="pb-2 font-bold text-center">Type</th>
                       <th className="pb-2 font-bold text-right">Action</th>
                     </tr>
                   </thead>
@@ -658,17 +608,6 @@ export default function DynamicApiToolGenerator({ onBackToDashboard, onOpenTool 
                         <td className="py-2.5 pr-2">
                           <p className="font-bold text-white text-xs">{tool.name}</p>
                           <p className="text-[10px] font-mono text-slate-500">{tool.service_key}</p>
-                        </td>
-                        <td className="py-2.5 px-2 text-center">
-                          <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full border ${
-                            tool.category === 'premium'
-                              ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'
-                              : tool.category === 'vip'
-                              ? 'bg-purple-500/20 text-purple-300 border-purple-500/30'
-                              : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
-                          }`}>
-                            {tool.category || 'FREE'}
-                          </span>
                         </td>
                         <td className="py-2.5 pl-2 text-right space-x-1">
                           <button
