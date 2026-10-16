@@ -1,11 +1,34 @@
-import React, { useState, useEffect } from 'react'
 import { 
   Home, LogOut, Zap, Download, RefreshCw, AlertTriangle, 
   CheckCircle, Sparkles, ArrowLeft, ArrowRight, Grid,
-  Image as ImageIcon, MessageSquare, Plus, Trash2, ChevronRight
+  Image as ImageIcon, MessageSquare, Plus, Trash2, ChevronRight,
+  Clock, Calendar
 } from 'lucide-react'
 import { AuthSession, DynamicService } from '../types'
 import { ApiParameter } from './DynamicApiToolGenerator'
+
+function getCurrentBdTime(): string {
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Dhaka',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(new Date())
+}
+
+function getCurrentBdDateTime(): string {
+  const now = new Date()
+  const d = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Dhaka',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(now)
+  return d.replace(',', '')
+}
 
 interface UserDashboardProps {
   session: AuthSession
@@ -464,30 +487,129 @@ export default function UserDashboard({ session, onSignOut, onGoToHome }: UserDa
                     ) : (
                       fields
                         .filter(f => f.field_key !== 'type') // Exclude redundant type field as it's auto-managed
-                        .map((field) => (
-                          <div key={field.field_key} className="space-y-1.5">
-                            <label className="block text-xs font-bold text-slate-300">
-                              {field.field_label || field.field_key}
-                              {field.is_required && <span className="text-rose-400 ml-1">*</span>}
-                            </label>
-                            <input
-                              type={
-                                field.field_type === 'number'
-                                  ? 'number'
-                                  : field.field_type === 'date'
-                                  ? 'date'
-                                  : field.field_type === 'time'
-                                  ? 'time'
-                                  : 'text'
-                              }
-                              value={formValues[field.field_key] || ''}
-                              onChange={(e) => handleInputChange(field.field_key, e.target.value)}
-                              placeholder={field.placeholder || `Enter ${field.field_label || field.field_key}`}
-                              required={field.is_required}
-                              className="w-full bg-[#070b14] border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition"
-                            />
-                          </div>
-                        ))
+                        .map((field) => {
+                          // Dual Type-or-Select for TIME
+                          if (field.field_key === 'time') {
+                            return (
+                              <div key={field.field_key} className="space-y-1.5">
+                                <div className="flex items-center justify-between">
+                                  <label className="block text-xs font-bold text-slate-300">
+                                    {field.field_label || 'Status Bar Time (সময়)'}
+                                    {field.is_required && <span className="text-rose-400 ml-1">*</span>}
+                                  </label>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleInputChange('time', getCurrentBdTime())}
+                                    className="text-[10px] text-indigo-400 hover:text-indigo-300 font-bold flex items-center gap-1 cursor-pointer bg-indigo-950/60 hover:bg-indigo-900/60 px-2 py-0.5 rounded-md border border-indigo-900/50 transition"
+                                  >
+                                    <Clock className="w-3 h-3 text-indigo-400" />
+                                    <span>Set Current Time</span>
+                                  </button>
+                                </div>
+                                <div className="relative flex items-center">
+                                  <input
+                                    type="text"
+                                    value={formValues['time'] || ''}
+                                    onChange={(e) => handleInputChange('time', e.target.value)}
+                                    placeholder={field.placeholder || "Type (e.g. 19:01) or click clock"}
+                                    className="w-full bg-[#070b14] border border-slate-700/80 rounded-xl pl-3.5 pr-10 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition"
+                                  />
+                                  <input
+                                    type="time"
+                                    onChange={(e) => {
+                                      if (e.target.value) handleInputChange('time', e.target.value)
+                                    }}
+                                    className="absolute right-2.5 opacity-60 hover:opacity-100 cursor-pointer w-6 h-6 border-0 bg-transparent text-white"
+                                    title="Click to select from clock"
+                                  />
+                                </div>
+                                <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                                  <span className="text-[10px] text-slate-500">Presets:</span>
+                                  {['09:30', '12:00', '15:45', '19:01', '21:30'].map((preset) => (
+                                    <button
+                                      key={preset}
+                                      type="button"
+                                      onClick={() => handleInputChange('time', preset)}
+                                      className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-slate-900 hover:bg-indigo-950 text-slate-400 hover:text-indigo-300 border border-slate-800 transition cursor-pointer"
+                                    >
+                                      {preset}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            )
+                          }
+
+                          // Dual Type-or-Select for DATE
+                          if (field.field_key === 'date') {
+                            return (
+                              <div key={field.field_key} className="space-y-1.5">
+                                <div className="flex items-center justify-between">
+                                  <label className="block text-xs font-bold text-slate-300">
+                                    {field.field_label || 'Date & Time (তারিখ ও সময়)'}
+                                    {field.is_required && <span className="text-rose-400 ml-1">*</span>}
+                                  </label>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleInputChange('date', getCurrentBdDateTime())}
+                                    className="text-[10px] text-emerald-400 hover:text-emerald-300 font-bold flex items-center gap-1 cursor-pointer bg-emerald-950/60 hover:bg-emerald-900/60 px-2 py-0.5 rounded-md border border-emerald-900/50 transition"
+                                  >
+                                    <Calendar className="w-3 h-3 text-emerald-400" />
+                                    <span>Today / Now</span>
+                                  </button>
+                                </div>
+                                <div className="relative flex items-center">
+                                  <input
+                                    type="text"
+                                    value={formValues['date'] || ''}
+                                    onChange={(e) => handleInputChange('date', e.target.value)}
+                                    placeholder={field.placeholder || "Type (e.g. 16/10/2026 19:01)"}
+                                    className="w-full bg-[#070b14] border border-slate-700/80 rounded-xl pl-3.5 pr-10 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition"
+                                  />
+                                  <input
+                                    type="datetime-local"
+                                    onChange={(e) => {
+                                      if (!e.target.value) return
+                                      const [dPart, tPart] = e.target.value.split('T')
+                                      if (dPart && tPart) {
+                                        const [y, m, d] = dPart.split('-')
+                                        handleInputChange('date', `${d}/${m}/${y} ${tPart}`)
+                                      }
+                                    }}
+                                    className="absolute right-2.5 opacity-60 hover:opacity-100 cursor-pointer w-6 h-6 border-0 bg-transparent text-white"
+                                    title="Click to select date and time"
+                                  />
+                                </div>
+                              </div>
+                            )
+                          }
+
+                          // Default inputs
+                          return (
+                            <div key={field.field_key} className="space-y-1.5">
+                              <label className="block text-xs font-bold text-slate-300">
+                                {field.field_label || field.field_key}
+                                {field.is_required && <span className="text-rose-400 ml-1">*</span>}
+                              </label>
+                              <input
+                                type={
+                                  field.field_type === 'number'
+                                    ? 'number'
+                                    : field.field_type === 'date'
+                                    ? 'date'
+                                    : field.field_type === 'time'
+                                    ? 'time'
+                                    : 'text'
+                                }
+                                value={formValues[field.field_key] || ''}
+                                onChange={(e) => handleInputChange(field.field_key, e.target.value)}
+                                placeholder={field.placeholder || `Enter ${field.field_label || field.field_key}`}
+                                required={field.is_required}
+                                className="w-full bg-[#070b14] border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition"
+                              />
+                            </div>
+                          )
+                        })
                     )}
 
                     {/* Message 2 Dynamic Fields (Visible only when showSecondMsg is true) */}
@@ -596,32 +718,77 @@ export default function UserDashboard({ session, onSignOut, onGoToHome }: UserDa
                           </div>
                         )}
 
-                        {/* 2nd Time & Date Grid */}
-                        <div className="grid grid-cols-2 gap-3">
+                        {/* 2nd Time & Date Grid (Dual Type or Select) */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <div className="space-y-1.5">
-                            <label className="block text-xs font-bold text-slate-300">
-                              2nd Time (সময়)
-                            </label>
-                            <input
-                              type="text"
-                              value={secondMsgValues['time2'] || ''}
-                              onChange={(e) => handleSecondMsgChange('time2', e.target.value)}
-                              placeholder="e.g. 19:05"
-                              className="w-full bg-[#070b14] border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition"
-                            />
+                            <div className="flex items-center justify-between">
+                              <label className="block text-xs font-bold text-slate-300">
+                                2nd Time (সময়)
+                              </label>
+                              <button
+                                type="button"
+                                onClick={() => handleSecondMsgChange('time2', getCurrentBdTime())}
+                                className="text-[10px] text-indigo-400 hover:text-indigo-300 font-bold flex items-center gap-1 cursor-pointer"
+                              >
+                                <Clock className="w-2.5 h-2.5" />
+                                <span>Now</span>
+                              </button>
+                            </div>
+                            <div className="relative flex items-center">
+                              <input
+                                type="text"
+                                value={secondMsgValues['time2'] || ''}
+                                onChange={(e) => handleSecondMsgChange('time2', e.target.value)}
+                                placeholder="Type (19:05) or pick"
+                                className="w-full bg-[#070b14] border border-slate-700/80 rounded-xl pl-3 pr-8 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition"
+                              />
+                              <input
+                                type="time"
+                                onChange={(e) => {
+                                  if (e.target.value) handleSecondMsgChange('time2', e.target.value)
+                                }}
+                                className="absolute right-2 opacity-60 hover:opacity-100 cursor-pointer w-5 h-5 border-0 bg-transparent text-white"
+                                title="Pick time"
+                              />
+                            </div>
                           </div>
 
                           <div className="space-y-1.5">
-                            <label className="block text-xs font-bold text-slate-300">
-                              2nd Date (তারিখ)
-                            </label>
-                            <input
-                              type="text"
-                              value={secondMsgValues['date2'] || ''}
-                              onChange={(e) => handleSecondMsgChange('date2', e.target.value)}
-                              placeholder="e.g. 16/10/2026 19:05"
-                              className="w-full bg-[#070b14] border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition"
-                            />
+                            <div className="flex items-center justify-between">
+                              <label className="block text-xs font-bold text-slate-300">
+                                2nd Date (তারিখ)
+                              </label>
+                              <button
+                                type="button"
+                                onClick={() => handleSecondMsgChange('date2', getCurrentBdDateTime())}
+                                className="text-[10px] text-emerald-400 hover:text-emerald-300 font-bold flex items-center gap-1 cursor-pointer"
+                              >
+                                <Calendar className="w-2.5 h-2.5" />
+                                <span>Today</span>
+                              </button>
+                            </div>
+                            <div className="relative flex items-center">
+                              <input
+                                type="text"
+                                value={secondMsgValues['date2'] || ''}
+                                onChange={(e) => handleSecondMsgChange('date2', e.target.value)}
+                                placeholder="Type (16/10/2026 19:05)"
+                                className="w-full bg-[#070b14] border border-slate-700/80 rounded-xl pl-3 pr-8 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition"
+                              />
+                              <input
+                                type="datetime-local"
+                                onChange={(e) => {
+                                  if (!e.target.value) return
+                                  const [dPart, tPart] = e.target.value.split('T')
+                                  if (dPart && tPart) {
+                                    const [y, m, d] = dPart.split('-')
+                                    handleSecondMsgChange('date2', `${d}/${m}/${y} ${tPart}`)
+                                  }
+                                }}
+                                className="absolute right-2 opacity-60 hover:opacity-100 cursor-pointer w-5 h-5 border-0 bg-transparent text-white"
+                                title="Pick date"
+                              />
+                            </div>
                           </div>
                         </div>
                       </div>
