@@ -16,31 +16,26 @@ type TemplateType = 'binance' | 'bk' | 'ng'
 function getInitialState(): { view: AppView; template: TemplateType } {
   if (typeof window === 'undefined') return { view: 'home', template: 'binance' }
 
-  const pathname = window.location.pathname.toLowerCase()
   const searchParams = new URLSearchParams(window.location.search)
   const queryType = (searchParams.get('type') || searchParams.get('app') || '').toLowerCase()
+  const viewParam = searchParams.get('view')
 
-  if (queryType === 'bk' || queryType === 'bkash' || pathname.startsWith('/bk')) {
+  if (viewParam === 'admin') {
+    return { view: 'admin', template: 'binance' }
+  }
+
+  // ONLY open generator if explicit type query parameter is provided
+  if (queryType === 'bk' || queryType === 'bkash') {
     return { view: 'generator', template: 'bk' }
   }
-  if (queryType === 'ng' || queryType === 'nagad' || pathname.startsWith('/ng')) {
+  if (queryType === 'ng' || queryType === 'nagad') {
     return { view: 'generator', template: 'ng' }
   }
-  if (queryType === 'binance' || pathname.startsWith('/binance')) {
+  if (queryType === 'binance') {
     return { view: 'generator', template: 'binance' }
   }
 
-  // If specific receipt params exist, open generator directly
-  if (searchParams.has('usd') || searchParams.has('orderId')) {
-    return { view: 'generator', template: 'binance' }
-  }
-  if (searchParams.has('fee') || searchParams.has('sender')) {
-    return { view: 'generator', template: 'bk' }
-  }
-  if (searchParams.has('metaTime1') || searchParams.has('meta1')) {
-    return { view: 'generator', template: 'ng' }
-  }
-
+  // Default is ALWAYS the Sky Fake Pay Home screen!
   return { view: 'home', template: 'binance' }
 }
 

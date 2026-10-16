@@ -1,11 +1,11 @@
 {
-  "name": "Receipt Studio Pro",
-  "short_name": "ReceiptApp",
-  "description": "Mobile Receipt Generator & Statement Studio for Binance, bKash & Nagad",
+  "name": "Sky Fake Pay",
+  "short_name": "SkyFakePay",
+  "description": "Sky Fake Pay - Mobile API Statement & Payment Studio",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#090d16",
-  "theme_color": "#090d16",
+  "background_color": "#ffffff",
+  "theme_color": "#4f46e5",
   "orientation": "portrait-primary",
   "icons": [
     {
