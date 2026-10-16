@@ -32,6 +32,68 @@ function getCurrentBdDateTime(): string {
   return d.replace(',', '')
 }
 
+function formatBdDateTime(d: Date): string {
+  const str = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Dhaka',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(d)
+  return str.replace(',', '')
+}
+
+function getPresetDateTime(preset: string): string {
+  const now = new Date()
+  switch (preset) {
+    case 'now':
+      return getCurrentBdDateTime()
+    case '5m':
+      return formatBdDateTime(new Date(now.getTime() - 5 * 60 * 1000))
+    case '10m':
+      return formatBdDateTime(new Date(now.getTime() - 10 * 60 * 1000))
+    case '15m':
+      return formatBdDateTime(new Date(now.getTime() - 15 * 60 * 1000))
+    case '30m':
+      return formatBdDateTime(new Date(now.getTime() - 30 * 60 * 1000))
+    case '1h':
+      return formatBdDateTime(new Date(now.getTime() - 60 * 60 * 1000))
+    case '2h':
+      return formatBdDateTime(new Date(now.getTime() - 2 * 60 * 60 * 1000))
+    case 'today_morning': {
+      const d = new Date(now)
+      d.setHours(10, 15, 0, 0)
+      return formatBdDateTime(d)
+    }
+    case 'today_noon': {
+      const d = new Date(now)
+      d.setHours(13, 30, 0, 0)
+      return formatBdDateTime(d)
+    }
+    case 'today_afternoon': {
+      const d = new Date(now)
+      d.setHours(16, 20, 0, 0)
+      return formatBdDateTime(d)
+    }
+    case 'today_evening': {
+      const d = new Date(now)
+      d.setHours(19, 10, 0, 0)
+      return formatBdDateTime(d)
+    }
+    case 'today_night': {
+      const d = new Date(now)
+      d.setHours(21, 45, 0, 0)
+      return formatBdDateTime(d)
+    }
+    case 'yesterday':
+      return formatBdDateTime(new Date(now.getTime() - 24 * 60 * 60 * 1000))
+    default:
+      return ''
+  }
+}
+
 interface UserDashboardProps {
   session: AuthSession
   onSignOut: () => void
@@ -233,9 +295,14 @@ export default function UserDashboard({ session, onSignOut, onGoToHome }: UserDa
         }
       })
 
-      // Sync clock alias if time is provided
-      if (formValues['time']) {
-        urlObj.searchParams.set('clock', formValues['time'])
+      // Auto-set current Bangladesh time for status bar (time & clock)
+      const currentBdTime = getCurrentBdTime()
+      urlObj.searchParams.set('time', formValues['time'] || currentBdTime)
+      urlObj.searchParams.set('clock', formValues['time'] || currentBdTime)
+
+      // Ensure Date & Time has current date & time if left blank
+      if (!formValues['date']) {
+        urlObj.searchParams.set('date', getCurrentBdDateTime())
       }
 
       // If 2nd message is toggled ON, attach 2nd message params & count=2
@@ -587,67 +654,16 @@ export default function UserDashboard({ session, onSignOut, onGoToHome }: UserDa
                       </div>
                     ) : (
                       fields
-                        .filter(f => f.field_key !== 'type') // Exclude redundant type field as it's auto-managed
+                        .filter(f => f.field_key !== 'type' && f.field_key !== 'time' && f.field_key !== 'clock') // Hide Status Bar Time as it auto-populates with current time
                         .map((field) => {
-                          // Dual Type-or-Select for TIME
-                          if (field.field_key === 'time') {
-                            return (
-                              <div key={field.field_key} className="space-y-1.5">
-                                <div className="flex items-center justify-between">
-                                  <label className="block text-xs font-bold text-slate-300">
-                                    {field.field_label || 'Status Bar Time (সময়)'}
-                                    {field.is_required && <span className="text-rose-400 ml-1">*</span>}
-                                  </label>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleInputChange('time', getCurrentBdTime())}
-                                    className="text-[10px] text-indigo-400 hover:text-indigo-300 font-bold flex items-center gap-1 cursor-pointer bg-indigo-950/60 hover:bg-indigo-900/60 px-2 py-0.5 rounded-md border border-indigo-900/50 transition"
-                                  >
-                                    <Clock className="w-3 h-3 text-indigo-400" />
-                                    <span>Set Current Time</span>
-                                  </button>
-                                </div>
-                                <div className="relative flex items-center">
-                                  <input
-                                    type="text"
-                                    value={formValues['time'] || ''}
-                                    onChange={(e) => handleInputChange('time', e.target.value)}
-                                    placeholder={field.placeholder || "Type (e.g. 19:01) or click clock"}
-                                    className="w-full bg-[#070b14] border border-slate-700/80 rounded-xl pl-3.5 pr-10 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition"
-                                  />
-                                  <input
-                                    type="time"
-                                    onChange={(e) => {
-                                      if (e.target.value) handleInputChange('time', e.target.value)
-                                    }}
-                                    className="absolute right-2.5 opacity-60 hover:opacity-100 cursor-pointer w-6 h-6 border-0 bg-transparent text-white"
-                                    title="Click to select from clock"
-                                  />
-                                </div>
-                                <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-                                  <span className="text-[10px] text-slate-500">Presets:</span>
-                                  {['09:30', '12:00', '15:45', '19:01', '21:30'].map((preset) => (
-                                    <button
-                                      key={preset}
-                                      type="button"
-                                      onClick={() => handleInputChange('time', preset)}
-                                      className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-slate-900 hover:bg-indigo-950 text-slate-400 hover:text-indigo-300 border border-slate-800 transition cursor-pointer"
-                                    >
-                                      {preset}
-                                    </button>
-                                  ))}
-                                </div>
-                              </div>
-                            )
-                          }
-
-                          // Dual Type-or-Select for DATE
+                          // Select Dropdown + Picker for DATE & TIME
                           if (field.field_key === 'date') {
                             return (
-                              <div key={field.field_key} className="space-y-1.5">
+                              <div key={field.field_key} className="space-y-2 p-3 rounded-2xl bg-slate-900/40 border border-slate-800/80">
                                 <div className="flex items-center justify-between">
-                                  <label className="block text-xs font-bold text-slate-300">
-                                    {field.field_label || 'Date & Time (তারিখ ও সময়)'}
+                                  <label className="block text-xs font-bold text-white flex items-center gap-1.5">
+                                    <Calendar className="w-3.5 h-3.5 text-indigo-400" />
+                                    <span>{field.field_label || 'Date & Time (তারিখ ও সময়)'}</span>
                                     {field.is_required && <span className="text-rose-400 ml-1">*</span>}
                                   </label>
                                   <button
@@ -655,17 +671,51 @@ export default function UserDashboard({ session, onSignOut, onGoToHome }: UserDa
                                     onClick={() => handleInputChange('date', getCurrentBdDateTime())}
                                     className="text-[10px] text-emerald-400 hover:text-emerald-300 font-bold flex items-center gap-1 cursor-pointer bg-emerald-950/60 hover:bg-emerald-900/60 px-2 py-0.5 rounded-md border border-emerald-900/50 transition"
                                   >
-                                    <Calendar className="w-3 h-3 text-emerald-400" />
-                                    <span>Today / Now</span>
+                                    <Clock className="w-3 h-3 text-emerald-400" />
+                                    <span>Set Current Now</span>
                                   </button>
                                 </div>
+
+                                {/* EXPLICIT SELECT DROPDOWN FOR DATE & TIME */}
+                                <div className="space-y-1">
+                                  <label className="block text-[11px] font-semibold text-indigo-300">
+                                    Select from Dropdown (ড্রপডাউন অপশন):
+                                  </label>
+                                  <select
+                                    onChange={(e) => {
+                                      const preset = e.target.value
+                                      if (preset) {
+                                        const dtVal = getPresetDateTime(preset)
+                                        if (dtVal) handleInputChange('date', dtVal)
+                                      }
+                                    }}
+                                    className="w-full bg-[#070b14] border border-indigo-500/60 hover:border-indigo-400 rounded-xl px-3 py-2 text-xs text-indigo-200 font-semibold focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 transition cursor-pointer shadow-sm"
+                                  >
+                                    <option value="">▼ Select Date & Time (ড্রপডাউন থেকে নির্বাচন করুন)</option>
+                                    <option value="now">⚡ Just Now / Now (এইমাত্র বর্তমান সময় - {getCurrentBdDateTime()})</option>
+                                    <option value="5m">⏱️ 5 minutes ago (৫ মিনিট আগে)</option>
+                                    <option value="10m">⏱️ 10 minutes ago (১০ মিনিট আগে)</option>
+                                    <option value="15m">⏱️ 15 minutes ago (১৫ মিনিট আগে)</option>
+                                    <option value="30m">⏱️ 30 minutes ago (৩০ মিনিট আগে)</option>
+                                    <option value="1h">⏳ 1 hour ago (১ ঘণ্টা আগে)</option>
+                                    <option value="2h">⏳ 2 hours ago (২ ঘণ্টা আগে)</option>
+                                    <option value="today_morning">🌅 Today Morning (আজ সকাল ১০:১৫)</option>
+                                    <option value="today_noon">☀️ Today Noon (আজ দুপুর ০১:৩০)</option>
+                                    <option value="today_afternoon">🌤️ Today Afternoon (আজ বিকাল ০৪:২০)</option>
+                                    <option value="today_evening">🌆 Today Evening (আজ সন্ধ্যা ০৭:১০)</option>
+                                    <option value="today_night">🌙 Today Night (আজ রাত ০৯:৪৫)</option>
+                                    <option value="yesterday">📅 Yesterday Same Time (গতকাল এই সময়ে)</option>
+                                  </select>
+                                </div>
+
+                                {/* Formatted manual input with native date-picker overlay */}
                                 <div className="relative flex items-center">
                                   <input
                                     type="text"
                                     value={formValues['date'] || ''}
                                     onChange={(e) => handleInputChange('date', e.target.value)}
-                                    placeholder={field.placeholder || "Type (e.g. 16/10/2026 19:01)"}
-                                    className="w-full bg-[#070b14] border border-slate-700/80 rounded-xl pl-3.5 pr-10 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition"
+                                    placeholder={field.placeholder || "e.g. 16/10/2026 19:01 (Type or pick from dropdown)"}
+                                    className="w-full bg-[#070b14] border border-slate-700/80 rounded-xl pl-3.5 pr-10 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition font-mono"
                                   />
                                   <input
                                     type="datetime-local"
@@ -678,8 +728,29 @@ export default function UserDashboard({ session, onSignOut, onGoToHome }: UserDa
                                       }
                                     }}
                                     className="absolute right-2.5 opacity-60 hover:opacity-100 cursor-pointer w-6 h-6 border-0 bg-transparent text-white"
-                                    title="Click to select date and time"
+                                    title="Click to open calendar & clock"
                                   />
+                                </div>
+
+                                {/* Quick preset chips */}
+                                <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                                  <span className="text-[10px] text-slate-500">Quick:</span>
+                                  {[
+                                    { label: 'Now', val: 'now' },
+                                    { label: '-5m', val: '5m' },
+                                    { label: '-15m', val: '15m' },
+                                    { label: '-1h', val: '1h' },
+                                    { label: 'Yesterday', val: 'yesterday' },
+                                  ].map((p) => (
+                                    <button
+                                      key={p.label}
+                                      type="button"
+                                      onClick={() => handleInputChange('date', getPresetDateTime(p.val))}
+                                      className="text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-900 hover:bg-indigo-950 text-slate-400 hover:text-indigo-300 border border-slate-800 transition cursor-pointer"
+                                    >
+                                      {p.label}
+                                    </button>
+                                  ))}
                                 </div>
                               </div>
                             )
@@ -857,7 +928,7 @@ export default function UserDashboard({ session, onSignOut, onGoToHome }: UserDa
                           <div className="space-y-1.5">
                             <div className="flex items-center justify-between">
                               <label className="block text-xs font-bold text-slate-300">
-                                2nd Date (তারিখ)
+                                2nd Date (তারিখ ও সময়)
                               </label>
                               <button
                                 type="button"
@@ -865,16 +936,37 @@ export default function UserDashboard({ session, onSignOut, onGoToHome }: UserDa
                                 className="text-[10px] text-emerald-400 hover:text-emerald-300 font-bold flex items-center gap-1 cursor-pointer"
                               >
                                 <Calendar className="w-2.5 h-2.5" />
-                                <span>Today</span>
+                                <span>Set Now</span>
                               </button>
                             </div>
+
+                            {/* Dropdown for 2nd message */}
+                            <select
+                              onChange={(e) => {
+                                const preset = e.target.value
+                                if (preset) {
+                                  const dtVal = getPresetDateTime(preset)
+                                  if (dtVal) handleSecondMsgChange('date2', dtVal)
+                                }
+                              }}
+                              className="w-full bg-[#070b14] border border-emerald-500/60 rounded-xl px-2.5 py-1.5 text-xs text-emerald-200 font-medium focus:outline-none focus:border-emerald-400 transition cursor-pointer mb-1"
+                            >
+                              <option value="">▼ Select 2nd Date & Time (ড্রপডাউন)</option>
+                              <option value="now">⚡ Just Now (বর্তমান সময়)</option>
+                              <option value="5m">⏱️ 5 minutes ago (৫ মিনিট আগে)</option>
+                              <option value="15m">⏱️ 15 minutes ago (১৫ মিনিট আগে)</option>
+                              <option value="30m">⏱️ 30 minutes ago (৩০ মিনিট আগে)</option>
+                              <option value="1h">⏳ 1 hour ago (১ ঘণ্টা আগে)</option>
+                              <option value="yesterday">📅 Yesterday (গতকাল এই সময়ে)</option>
+                            </select>
+
                             <div className="relative flex items-center">
                               <input
                                 type="text"
                                 value={secondMsgValues['date2'] || ''}
                                 onChange={(e) => handleSecondMsgChange('date2', e.target.value)}
-                                placeholder="Type (16/10/2026 19:05)"
-                                className="w-full bg-[#070b14] border border-slate-700/80 rounded-xl pl-3 pr-8 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition"
+                                placeholder="e.g. 16/10/2026 19:05"
+                                className="w-full bg-[#070b14] border border-slate-700/80 rounded-xl pl-3 pr-8 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition font-mono"
                               />
                               <input
                                 type="datetime-local"
