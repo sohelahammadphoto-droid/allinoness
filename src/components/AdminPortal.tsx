@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react'
 import { 
   ShieldCheck, UserPlus, Users, Key, LogOut, CheckCircle2, 
-  XCircle, Plus, Trash2, Calendar, RefreshCw, Sliders, 
-  Settings, ChevronRight, Lock, Eye, EyeOff, Sparkles, Building2,
-  Zap, Globe, Edit3, Layers
+  XCircle, Plus, Trash2, Calendar, RefreshCw,
+  Lock, Eye, EyeOff, Building2
 } from 'lucide-react'
 import CountdownTimer from './CountdownTimer'
 import DynamicApiToolGenerator from './DynamicApiToolGenerator'
-import { AuthSession, TenantInfo, TenantUser, TemplateInfo, DynamicField, DynamicService } from '../types'
+import { AuthSession, TenantInfo, TenantUser } from '../types'
 
 interface AdminPortalProps {
   onBackToApp?: () => void
@@ -27,7 +26,8 @@ export default function AdminPortal({ onBackToApp, session, onLogout }: AdminPor
   const [isLoadingUsers, setIsLoadingUsers] = useState(false)
 
   // Super Admin data
-  const [superTab, setSuperTab] = useState<'builder' | 'tenants' | 'services' | 'parameters'>('builder')
+  // Super Admin data (STRICTLY 2 TABS: Tool Generator & Client Admins)
+  const [superTab, setSuperTab] = useState<'builder' | 'tenants'>('builder')
   const [tenantsList, setTenantsList] = useState<TenantInfo[]>([])
   const [isLoadingTenants, setIsLoadingTenants] = useState(false)
   const [isCreateTenantModalOpen, setIsCreateTenantModalOpen] = useState(false)
@@ -38,30 +38,6 @@ export default function AdminPortal({ onBackToApp, session, onLogout }: AdminPor
   const [newTenantPassword, setNewTenantPassword] = useState('')
   const [newTenantDays, setNewTenantDays] = useState('30')
   const [newTenantMaxUsers, setNewTenantMaxUsers] = useState('100')
-
-  // Dynamic Services (D1)
-  const [servicesList, setServicesList] = useState<DynamicService[]>([])
-  const [isLoadingServices, setIsLoadingServices] = useState(false)
-  const [isCreateServiceModalOpen, setIsCreateServiceModalOpen] = useState(false)
-  const [newServiceKey, setNewServiceKey] = useState('')
-  const [newServiceName, setNewServiceName] = useState('')
-  const [newServiceSubtitle, setNewServiceSubtitle] = useState('')
-  const [newServiceIconType, setNewServiceIconType] = useState<'emoji' | 'image_url'>('emoji')
-  const [newServiceIconVal, setNewServiceIconVal] = useState('⚡')
-  const [newServiceBgColor, setNewServiceBgColor] = useState('#4f46e5')
-  const [newServiceApiUrl, setNewServiceApiUrl] = useState('')
-
-  // Dynamic Parameters (D1)
-  const [templates, setTemplates] = useState<TemplateInfo[]>([])
-  const [activeParamTemplate, setActiveParamTemplate] = useState<string>('')
-  const [isAddFieldModalOpen, setIsAddFieldModalOpen] = useState(false)
-  const [newFieldKey, setNewFieldKey] = useState('')
-  const [newFieldLabel, setNewFieldLabel] = useState('')
-  const [newFieldType, setNewFieldType] = useState<'text' | 'number' | 'select' | 'time' | 'boolean'>('text')
-  const [newFieldDefault, setNewFieldDefault] = useState('')
-  const [newFieldPlaceholder, setNewFieldPlaceholder] = useState('')
-  const [newFieldOptions, setNewFieldOptions] = useState('')
-  const [newFieldSection, setNewFieldSection] = useState<'general' | 'message2'>('general')
 
   // Fetch Client Admin Data
   const fetchClientAdminData = async () => {
@@ -90,33 +66,16 @@ export default function AdminPortal({ onBackToApp, session, onLogout }: AdminPor
   const fetchSuperAdminData = async () => {
     if (!session || session.role !== 'superadmin') return
     setIsLoadingTenants(true)
-    setIsLoadingServices(true)
     try {
-      // 1. Tenants
       const tenantsRes = await fetch('/api/super/tenants')
       const tenantsData = await tenantsRes.json() as any
       if (tenantsData.success) {
         setTenantsList(tenantsData.tenants)
       }
-
-      // 2. Services from D1
-      const servicesRes = await fetch('/api/services?all=true')
-      const servicesData = await servicesRes.json() as any
-      if (servicesData.success) {
-        setServicesList(servicesData.services)
-      }
-
-      // 3. Templates with Dynamic Fields from D1
-      const tplRes = await fetch('/api/templates')
-      const tplData = await tplRes.json() as any
-      if (tplData.success) {
-        setTemplates(tplData.templates)
-      }
     } catch (err) {
       console.error('Error fetching super admin data:', err)
     } finally {
       setIsLoadingTenants(false)
-      setIsLoadingServices(false)
     }
   }
 
@@ -259,109 +218,7 @@ export default function AdminPortal({ onBackToApp, session, onLogout }: AdminPor
     }
   }
 
-  // Super Admin: Add Dynamic Service / API to D1
-  const handleAddService = async (e: React.FormEvent) => {
-    e.preventDefault()
-    try {
-      const res = await fetch('/api/services', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          service_key: newServiceKey.trim().toLowerCase(),
-          name: newServiceName.trim(),
-          subtitle: newServiceSubtitle.trim() || 'Payment & Statement',
-          icon_type: newServiceIconType,
-          icon_val: newServiceIconVal.trim(),
-          bg_color: newServiceBgColor.trim() || '#4f46e5',
-          api_url: newServiceApiUrl.trim() || `/${newServiceKey}`,
-          is_active: 1,
-        })
-      })
 
-      const data = await res.json() as any
-      if (!res.ok) throw new Error(data.error || 'Failed to save service')
-
-      alert(`Service "${newServiceName}" added! It now appears on the Home Page!`)
-      setIsCreateServiceModalOpen(false)
-      setNewServiceKey('')
-      setNewServiceName('')
-      setNewServiceSubtitle('')
-      setNewServiceIconVal('⚡')
-      setNewServiceApiUrl('')
-      fetchSuperAdminData()
-    } catch (err: any) {
-      alert(err.message)
-    }
-  }
-
-  // Super Admin: Delete Service from D1
-  const handleDeleteService = async (serviceId: number) => {
-    if (!confirm('Remove this service from the home page?')) return
-    try {
-      const res = await fetch(`/api/services?id=${serviceId}`, { method: 'DELETE' })
-      const data = await res.json() as any
-      if (!res.ok) throw new Error(data.error || 'Failed to delete service')
-      fetchSuperAdminData()
-    } catch (err: any) {
-      alert(err.message)
-    }
-  }
-
-  // Super Admin: Add Dynamic Parameter to D1
-  const handleAddDynamicField = async (e: React.FormEvent) => {
-    e.preventDefault()
-    try {
-      let optionsArray: string[] | undefined
-      if (newFieldType === 'select') {
-        optionsArray = newFieldOptions
-          .split(',')
-          .map(s => s.trim())
-          .filter(Boolean)
-      }
-
-      const res = await fetch('/api/templates/fields', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          template_code: activeParamTemplate,
-          field_key: newFieldKey.trim(),
-          field_label: newFieldLabel.trim(),
-          field_type: newFieldType,
-          default_value: newFieldDefault.trim(),
-          placeholder: newFieldPlaceholder.trim(),
-          options: optionsArray,
-          section: newFieldSection,
-        })
-      })
-
-      const data = await res.json() as any
-      if (!res.ok) throw new Error(data.error || 'Failed to save dynamic parameter')
-
-      alert('Dynamic parameter added successfully to D1!')
-      setIsAddFieldModalOpen(false)
-      setNewFieldKey('')
-      setNewFieldLabel('')
-      setNewFieldDefault('')
-      setNewFieldPlaceholder('')
-      setNewFieldOptions('')
-      fetchSuperAdminData()
-    } catch (err: any) {
-      alert(err.message)
-    }
-  }
-
-  // Super Admin: Delete Dynamic Parameter from D1
-  const handleDeleteDynamicField = async (fieldId: number) => {
-    if (!confirm('Delete this dynamic parameter?')) return
-    try {
-      const res = await fetch(`/api/templates/fields?id=${fieldId}`, { method: 'DELETE' })
-      const data = await res.json() as any
-      if (!res.ok) throw new Error(data.error || 'Failed to delete parameter')
-      fetchSuperAdminData()
-    } catch (err: any) {
-      alert(err.message)
-    }
-  }
 
   // Filter users
   const filteredUsers = users.filter(u => 
@@ -625,7 +482,10 @@ export default function AdminPortal({ onBackToApp, session, onLogout }: AdminPor
   if (session.role === 'superadmin' && superTab === 'builder') {
     return (
       <DynamicApiToolGenerator
-        onBackToDashboard={() => setSuperTab('services')}
+        activeTab="builder"
+        onSwitchTab={(tab) => setSuperTab(tab)}
+        tenantsCount={tenantsList.length}
+        onBackToDashboard={() => setSuperTab('tenants')}
         onOpenTool={(slug) => {
           if (onBackToApp) onBackToApp()
         }}
@@ -633,10 +493,10 @@ export default function AdminPortal({ onBackToApp, session, onLogout }: AdminPor
     )
   }
 
-  // RENDER: SUPER ADMINISTRATOR PANEL
+  // RENDER: SUPER ADMINISTRATOR PANEL (STRICTLY 2 TABS: Tool Generator & Client Admins)
   return (
-    <div className="w-full max-w-4xl mx-auto p-4 sm:p-6 pb-28 space-y-6">
-      {/* Super Admin Status Banner */}
+    <div className="w-full max-w-5xl mx-auto p-4 sm:p-6 pb-28 space-y-6">
+      {/* Super Admin Status Banner with 2 TABS ONLY */}
       <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-900/80 border border-slate-800 rounded-2xl p-4 shadow-lg backdrop-blur-md">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-rose-600 to-amber-500 text-white flex items-center justify-center font-black text-lg shadow-md shadow-rose-600/20">
@@ -644,171 +504,39 @@ export default function AdminPortal({ onBackToApp, session, onLogout }: AdminPor
           </div>
           <div>
             <h2 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
-              <span>Super Administrator Master Control</span>
-              <span className="text-[10px] bg-rose-500/20 text-rose-300 border border-rose-500/30 px-2 py-0.5 rounded-full font-bold">
-                FULL ACCESS
+              <span>Super Administrator Control</span>
+              <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">
+                Cloudflare D1 Live
               </span>
             </h2>
             <span className="text-[11px] text-slate-400">
-              Manage Dynamic Services (APIs), Client Admins (+30 Days), and Parameter Engine
+              Tool Generator & Client Admin License Management
             </span>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        {/* STRICTLY 2 TABS */}
+        <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 gap-1">
           <button
             onClick={() => setSuperTab('builder')}
-            className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-xs font-black shadow-md flex items-center gap-1.5 hover:from-purple-500 hover:to-indigo-500 transition cursor-pointer"
+            className="px-3.5 py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-white hover:bg-slate-800/60 transition flex items-center gap-1.5 cursor-pointer"
           >
             <span>🚀</span>
-            <span>Launch Tool Builder</span>
+            <span>Tool Generator</span>
           </button>
-          <span className="text-xs text-emerald-400 font-semibold flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            Cloudflare D1 Live
-          </span>
+
+          <button
+            onClick={() => setSuperTab('tenants')}
+            className="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-rose-600 text-white shadow-md transition flex items-center gap-1.5 cursor-pointer"
+          >
+            <Building2 className="w-3.5 h-3.5" />
+            <span>Client Admins ({tenantsList.length})</span>
+          </button>
         </div>
       </div>
 
-      {/* Mode Switcher */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 bg-slate-900 p-1.5 rounded-2xl border border-slate-800 gap-1">
-        <button
-          onClick={() => setSuperTab('builder')}
-          className={`py-2.5 rounded-xl text-xs sm:text-sm font-bold transition flex items-center justify-center gap-1.5 ${
-            superTab === 'builder'
-              ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md'
-              : 'text-slate-400 hover:text-white'
-          }`}
-        >
-          <span>🚀</span>
-          <span>Tool Generator</span>
-        </button>
-
-        <button
-          onClick={() => setSuperTab('services')}
-          className={`py-2.5 rounded-xl text-xs sm:text-sm font-bold transition flex items-center justify-center gap-1.5 ${
-            superTab === 'services'
-              ? 'bg-indigo-600 text-white shadow-md'
-              : 'text-slate-400 hover:text-white'
-          }`}
-        >
-          <Globe className="w-4 h-4" />
-          <span>Services ({servicesList.length})</span>
-        </button>
-
-        <button
-          onClick={() => setSuperTab('tenants')}
-          className={`flex-1 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition flex items-center justify-center gap-1.5 ${
-            superTab === 'tenants'
-              ? 'bg-rose-600 text-white shadow-md'
-              : 'text-slate-400 hover:text-white'
-          }`}
-        >
-          <Building2 className="w-4 h-4" />
-          <span>Client Admins ({tenantsList.length})</span>
-        </button>
-
-        <button
-          onClick={() => setSuperTab('parameters')}
-          className={`flex-1 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition flex items-center justify-center gap-1.5 ${
-            superTab === 'parameters'
-              ? 'bg-amber-500 text-black shadow-md'
-              : 'text-slate-400 hover:text-white'
-          }`}
-        >
-          <Sliders className="w-4 h-4" />
-          <span>Parameters (D1)</span>
-        </button>
-      </div>
-
-      {/* TAB 1: DYNAMIC SERVICES & APIS (Super Admin adds service name, icon, API to display on Home) */}
-      {superTab === 'services' && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-sm font-bold text-slate-200 flex items-center gap-2">
-                <Globe className="w-4 h-4 text-indigo-400" />
-                <span>Home Page Dynamic Services & Connected APIs</span>
-              </h3>
-              <p className="text-[11px] text-slate-400">
-                Services added here appear on the Home screen in real-time
-              </p>
-            </div>
-
-            <button
-              onClick={() => setIsCreateServiceModalOpen(true)}
-              className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-md shadow-indigo-600/20 active:scale-95"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Add Dynamic Service</span>
-            </button>
-          </div>
-
-          {isLoadingServices ? (
-            <div className="py-12 text-center text-slate-400 text-xs flex items-center justify-center gap-2">
-              <RefreshCw className="w-4 h-4 animate-spin text-indigo-400" />
-              <span>Fetching dynamic services from Cloudflare D1...</span>
-            </div>
-          ) : servicesList.length === 0 ? (
-            <div className="py-12 text-center text-slate-400 text-xs bg-slate-900/50 rounded-2xl border border-slate-800">
-              No services added yet. Tap "Add Dynamic Service" to create your first API/Service card!
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {servicesList.map((service) => (
-                <div
-                  key={service.id}
-                  className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 shadow-lg flex items-center justify-between gap-3"
-                >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="w-12 h-12 rounded-2xl flex items-center justify-center text-xl font-bold text-white shadow-md shrink-0"
-                      style={{ backgroundColor: service.bg_color || '#4f46e5' }}
-                    >
-                      {service.icon_val || '⚡'}
-                    </div>
-
-                    <div>
-                      <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                        <span>{service.name}</span>
-                        <span className="text-[10px] font-mono bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded">
-                          {service.service_key}
-                        </span>
-                      </h4>
-                      <span className="text-xs text-slate-400 block">{service.subtitle || 'Service'}</span>
-                      <span className="text-[10px] text-indigo-400 font-mono mt-0.5 block">
-                        Target: {service.api_url || `/${service.service_key}`}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                      service.is_active === 1
-                        ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
-                        : 'bg-rose-500/20 text-rose-400 border-rose-500/30'
-                    }`}>
-                      {service.is_active === 1 ? 'Live' : 'Hidden'}
-                    </span>
-
-                    <button
-                      onClick={() => handleDeleteService(service.id)}
-                      className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-950/40 transition"
-                      title="Delete Service"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* TAB 2: CLIENT ADMINS & MONTHLY SUBSCRIPTION MANAGEMENT */}
-      {superTab === 'tenants' && (
-        <div className="space-y-4">
+      {/* CLIENT ADMINS & MONTHLY SUBSCRIPTION MANAGEMENT */}
+      <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-bold text-slate-200">
               Client Admin Portals & Monthly Licenses
@@ -902,250 +630,8 @@ export default function AdminPortal({ onBackToApp, session, onLogout }: AdminPor
             </div>
           )}
         </div>
-      )}
 
-      {/* TAB 3: DYNAMIC PARAMETER BUILDER */}
-      {superTab === 'parameters' && (
-        <div className="space-y-4">
-          {servicesList.length === 0 ? (
-            <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-10 text-center space-y-4">
-              <div className="w-14 h-14 rounded-2xl bg-amber-500/10 text-amber-400 mx-auto flex items-center justify-center">
-                <Sliders className="w-7 h-7" />
-              </div>
-              <h3 className="text-base font-bold text-white">No Connected Services / APIs Yet</h3>
-              <p className="text-xs text-slate-400 max-w-md mx-auto leading-relaxed">
-                All default templates (Binance, bKash, Nagad) have been removed. Add your custom Service or API from the "Dynamic Services & APIs" tab first. Then you can configure custom parameters here.
-              </p>
-              <button
-                onClick={() => setSuperTab('services')}
-                className="py-2.5 px-5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition cursor-pointer"
-              >
-                Go to Dynamic Services
-              </button>
-            </div>
-          ) : (
-            <>
-              {/* Dynamic Service Switcher Tabs */}
-              <div className="flex flex-wrap bg-slate-900 p-1.5 rounded-xl border border-slate-800 gap-1.5">
-                {servicesList.map((srv) => (
-                  <button
-                    key={srv.id}
-                    onClick={() => setActiveParamTemplate(srv.service_key)}
-                    className={`px-3.5 py-2 text-xs font-bold rounded-lg transition flex items-center gap-1.5 cursor-pointer ${
-                      (activeParamTemplate || servicesList[0]?.service_key) === srv.service_key
-                        ? 'bg-amber-500 text-black shadow-md'
-                        : 'text-slate-400 hover:text-white hover:bg-slate-800'
-                    }`}
-                  >
-                    <span>{srv.icon_val || '⚡'}</span>
-                    <span>{srv.name}</span>
-                  </button>
-                ))}
-              </div>
 
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold text-slate-200">
-                  Dynamic Parameters & Options for {(activeParamTemplate || servicesList[0]?.service_key || '').toUpperCase()}
-                </h3>
-
-                <button
-                  onClick={() => {
-                    if (!activeParamTemplate && servicesList.length > 0) {
-                      setActiveParamTemplate(servicesList[0].service_key)
-                    }
-                    setIsAddFieldModalOpen(true)
-                  }}
-                  className="px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold transition flex items-center gap-1.5 shadow-md shadow-amber-500/20 active:scale-95 cursor-pointer"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>Add Dynamic Option / Field</span>
-                </button>
-              </div>
-
-              <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 shadow-xl space-y-3">
-                {(() => {
-                  const targetCode = activeParamTemplate || servicesList[0]?.service_key
-                  const currentTpl = templates.find(t => t.code === targetCode)
-                  const fields = currentTpl?.fields || []
-
-                  if (fields.length === 0) {
-                    return (
-                      <div className="py-8 text-center text-slate-400 text-xs">
-                        No dynamic parameters added for this API yet. Click "Add Dynamic Option / Field" above to configure parameter keys.
-                      </div>
-                    )
-                  }
-
-              return (
-                <div className="space-y-2">
-                  {fields.map((field) => (
-                    <div
-                      key={field.id}
-                      className="flex items-center justify-between p-3 rounded-xl bg-slate-950/80 border border-slate-800 hover:border-slate-700 transition"
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="w-7 h-7 rounded-lg bg-slate-800 text-slate-300 font-mono text-xs flex items-center justify-center font-bold">
-                          {field.sort_order}
-                        </span>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold text-white">{field.field_label}</span>
-                            <span className="text-[10px] font-mono text-amber-400 bg-amber-500/10 px-1.5 py-0.2 rounded border border-amber-500/20">
-                              {field.field_key}
-                            </span>
-                            <span className="text-[9px] uppercase font-bold text-slate-400 bg-slate-800 px-1.5 py-0.2 rounded">
-                              {field.field_type}
-                            </span>
-                          </div>
-                          
-                          {field.options && field.options.length > 0 && (
-                            <div className="flex items-center gap-1 mt-1 flex-wrap">
-                              <span className="text-[10px] text-slate-400">Options:</span>
-                              {field.options.map((opt, i) => (
-                                <span key={i} className="text-[9px] bg-slate-800 text-emerald-300 px-1.5 py-0.2 rounded border border-emerald-500/30">
-                                  {opt}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      <button
-                        onClick={() => handleDeleteDynamicField(field.id)}
-                        className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-950/40 transition"
-                        title="Delete parameter"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )
-            })()}
-          </div>
-        </>
-      )}
-    </div>
-  )}
-
-      {/* MODAL: Create New Dynamic Service / API */}
-      {isCreateServiceModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-slate-900 border border-slate-700 rounded-2xl p-5 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
-                <Globe className="w-4 h-4 text-indigo-400" />
-                <span>Add Dynamic Service / API to Home Screen</span>
-              </h3>
-              <button 
-                onClick={() => setIsCreateServiceModalOpen(false)}
-                className="text-slate-400 hover:text-white"
-              >
-                ✕
-              </button>
-            </div>
-
-            <form onSubmit={handleAddService} className="space-y-3">
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">Service Key</label>
-                  <input
-                    type="text"
-                    value={newServiceKey}
-                    onChange={(e) => setNewServiceKey(e.target.value)}
-                    placeholder="e.g. rocket, upay, paypal"
-                    required
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">Display Name</label>
-                  <input
-                    type="text"
-                    value={newServiceName}
-                    onChange={(e) => setNewServiceName(e.target.value)}
-                    placeholder="e.g. Rocket Pay"
-                    required
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Subtitle</label>
-                <input
-                  type="text"
-                  value={newServiceSubtitle}
-                  onChange={(e) => setNewServiceSubtitle(e.target.value)}
-                  placeholder="e.g. Send Money & Cash Out"
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">Icon Emoji or Image URL</label>
-                  <input
-                    type="text"
-                    value={newServiceIconVal}
-                    onChange={(e) => setNewServiceIconVal(e.target.value)}
-                    placeholder="e.g. 🚀 or 💳 or image URL"
-                    required
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">Badge Background Color</label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="color"
-                      value={newServiceBgColor}
-                      onChange={(e) => setNewServiceBgColor(e.target.value)}
-                      className="w-8 h-8 rounded-lg cursor-pointer bg-transparent border-0"
-                    />
-                    <input
-                      type="text"
-                      value={newServiceBgColor}
-                      onChange={(e) => setNewServiceBgColor(e.target.value)}
-                      className="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-2 py-1.5 text-xs text-white font-mono"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Target Route / API URL</label>
-                <input
-                  type="text"
-                  value={newServiceApiUrl}
-                  onChange={(e) => setNewServiceApiUrl(e.target.value)}
-                  placeholder="e.g. /bk or /ng or /binance or https://api..."
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
-                />
-              </div>
-
-              <div className="pt-2 flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setIsCreateServiceModalOpen(false)}
-                  className="flex-1 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-bold hover:bg-slate-700 transition"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 py-2 rounded-xl bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-500 transition"
-                >
-                  Save Service to D1
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
       {/* MODAL: Create New Client Admin */}
       {isCreateTenantModalOpen && (
@@ -1247,141 +733,6 @@ export default function AdminPortal({ onBackToApp, session, onLogout }: AdminPor
         </div>
       )}
 
-      {/* MODAL: Add Dynamic Parameter & Option to D1 */}
-      {isAddFieldModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-slate-900 border border-slate-700 rounded-2xl p-5 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
-                <Sliders className="w-4 h-4 text-amber-400" />
-                <span>Add Dynamic Parameter to {activeParamTemplate.toUpperCase()}</span>
-              </h3>
-              <button 
-                onClick={() => setIsAddFieldModalOpen(false)}
-                className="text-slate-400 hover:text-white"
-              >
-                ✕
-              </button>
-            </div>
-
-            <form onSubmit={handleAddDynamicField} className="space-y-3">
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">Field Key (API param)</label>
-                  <input
-                    type="text"
-                    value={newFieldKey}
-                    onChange={(e) => setNewFieldKey(e.target.value)}
-                    placeholder="e.g. coin, fee, ref"
-                    required
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-400"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">Display Label</label>
-                  <input
-                    type="text"
-                    value={newFieldLabel}
-                    onChange={(e) => setNewFieldLabel(e.target.value)}
-                    placeholder="e.g. Cryptocurrency"
-                    required
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-400"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">Field Type</label>
-                  <select
-                    value={newFieldType}
-                    onChange={(e) => setNewFieldType(e.target.value as any)}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400"
-                  >
-                    <option value="text">Text Input</option>
-                    <option value="number">Number Input</option>
-                    <option value="select">Select Dropdown (Options)</option>
-                    <option value="time">Time / Clock</option>
-                    <option value="boolean">Boolean Switch (Dual Msg)</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">Section</label>
-                  <select
-                    value={newFieldSection}
-                    onChange={(e) => setNewFieldSection(e.target.value as any)}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400"
-                  >
-                    <option value="general">Primary / General</option>
-                    <option value="message2">Secondary Message</option>
-                  </select>
-                </div>
-              </div>
-
-              {newFieldType === 'select' && (
-                <div>
-                  <label className="block text-xs font-semibold text-amber-300 mb-1">
-                    Dropdown Options (Comma separated)
-                  </label>
-                  <input
-                    type="text"
-                    value={newFieldOptions}
-                    onChange={(e) => setNewFieldOptions(e.target.value)}
-                    placeholder="e.g. USDT, BTC, ETH, BNB, SOL"
-                    required
-                    className="w-full bg-slate-950 border border-amber-500/50 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-400"
-                  />
-                  <span className="text-[10px] text-slate-400 mt-0.5 block">
-                    Separate multiple choices with commas
-                  </span>
-                </div>
-              )}
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">Default Value</label>
-                  <input
-                    type="text"
-                    value={newFieldDefault}
-                    onChange={(e) => setNewFieldDefault(e.target.value)}
-                    placeholder="Default text"
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-400"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">Placeholder</label>
-                  <input
-                    type="text"
-                    value={newFieldPlaceholder}
-                    onChange={(e) => setNewFieldPlaceholder(e.target.value)}
-                    placeholder="Placeholder hint"
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-400"
-                  />
-                </div>
-              </div>
-
-              <div className="pt-2 flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setIsAddFieldModalOpen(false)}
-                  className="flex-1 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-bold hover:bg-slate-700 transition"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 py-2 rounded-xl bg-amber-500 text-black text-xs font-bold hover:bg-amber-400 transition"
-                >
-                  Save to D1
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

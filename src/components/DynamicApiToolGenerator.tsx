@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { 
   Plus, Trash2, ArrowLeft, Save, Sparkles, Check, 
-  ExternalLink, Edit3, Eye, Layers, Zap
+  ExternalLink, Edit3, Eye, Layers, Zap, Building2
 } from 'lucide-react'
 
 export interface ApiParameter {
@@ -26,11 +26,20 @@ export interface ApiTool {
 }
 
 interface DynamicApiToolGeneratorProps {
-  onBackToDashboard: () => void
+  onBackToDashboard?: () => void
   onOpenTool?: (slug: string) => void
+  activeTab?: 'builder' | 'tenants'
+  onSwitchTab?: (tab: 'builder' | 'tenants') => void
+  tenantsCount?: number
 }
 
-export default function DynamicApiToolGenerator({ onBackToDashboard, onOpenTool }: DynamicApiToolGeneratorProps) {
+export default function DynamicApiToolGenerator({ 
+  onBackToDashboard, 
+  onOpenTool,
+  activeTab = 'builder',
+  onSwitchTab,
+  tenantsCount = 0
+}: DynamicApiToolGeneratorProps) {
   // Form State
   const [editingId, setEditingId] = useState<number | null>(null)
   const [toolTitle, setToolTitle] = useState('Vercel Receipt Generator')
@@ -263,13 +272,35 @@ export default function DynamicApiToolGenerator({ onBackToDashboard, onOpenTool 
               + নতুন টুল তৈরি
             </button>
           )}
-          <button
-            onClick={onBackToDashboard}
-            className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-indigo-600/30 hover:border-indigo-500/50 border border-slate-800 text-indigo-400 hover:text-white text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Admin Dashboard</span>
-          </button>
+
+          {/* STRICTLY 2 TABS */}
+          <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 gap-1">
+            <button
+              type="button"
+              onClick={() => onSwitchTab && onSwitchTab('builder')}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                activeTab === 'builder'
+                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+              }`}
+            >
+              <span>🚀</span>
+              <span>Tool Generator</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onSwitchTab && onSwitchTab('tenants')}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                activeTab === 'tenants'
+                  ? 'bg-rose-600 text-white shadow-md'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+              }`}
+            >
+              <Building2 className="w-3.5 h-3.5" />
+              <span>Client Admins ({tenantsCount})</span>
+            </button>
+          </div>
         </div>
       </div>
 
