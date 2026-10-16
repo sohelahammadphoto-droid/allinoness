@@ -42,29 +42,6 @@ export default function SingleLoginPage({ onSuccess, onBackToHome }: SingleLogin
     }
   }
 
-  // Quick 1-click login for test users
-  const quickLogin = async (user: string, pass: string) => {
-    setUsername(user)
-    setPassword(pass)
-    setError('')
-    setIsLoading(true)
-
-    try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: user, password: pass }),
-      })
-      const data = await res.json() as any
-      if (!res.ok) throw new Error(data.error || 'Login failed')
-      onSuccess(data)
-    } catch (err: any) {
-      setError(err.message)
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
   return (
     <div className="min-h-screen bg-[#070b14] text-white flex flex-col justify-center items-center px-4 py-8 font-sans relative overflow-hidden">
       {/* Background glow */}
@@ -118,7 +95,7 @@ export default function SingleLoginPage({ onSuccess, onBackToHome }: SingleLogin
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="e.g. Sohelahammad5853 or client_demo"
+              placeholder="Enter your username or client code"
               required
               className="w-full bg-slate-950 border border-slate-700/80 rounded-2xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition"
             />
@@ -163,29 +140,10 @@ export default function SingleLoginPage({ onSuccess, onBackToHome }: SingleLogin
           </button>
         </form>
 
-        {/* Quick Demo Logins for Fast Access */}
-        <div className="pt-2 border-t border-slate-800/80 space-y-2.5">
-          <p className="text-[10px] text-center text-slate-500 font-bold uppercase tracking-wider">
-            Fast Access Credentials
-          </p>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => quickLogin('Sohelahammad5853', 'Sr25800852*#')}
-              className="py-2.5 px-3 rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-200 text-xs font-semibold transition active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer"
-            >
-              <span>👑</span>
-              <span>Super Admin</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => quickLogin('client_demo', 'client123456')}
-              className="py-2.5 px-3 rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-200 text-xs font-semibold transition active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer"
-            >
-              <span>🏢</span>
-              <span>Client Admin</span>
-            </button>
-          </div>
+        {/* Security Badge */}
+        <div className="pt-3 border-t border-slate-800/80 flex items-center justify-center gap-2 text-xs text-slate-400">
+          <ShieldCheck className="w-4 h-4 text-emerald-400" />
+          <span>Cloudflare Edge Secured Authentication</span>
         </div>
       </div>
     </div>
