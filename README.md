@@ -111,6 +111,7 @@ Pass `type=binance`, `type=bk`, or `type=ng` (or `app=...`):
 | `time2` | *Current BD Time* | Message 2 custom time |
 | `date2` | *Current BD Date & Time* | Message 2 Transaction Date & Time |
 | `metaTime2` | *Auto-synchronized* | Message 2 timestamp |
+| `font` | `0` (Classic) | Font style: `1` (random device font) or `samsung`, `pixel`, `oneplus`, `miui`, `oppo`, `hand` |
 
 ### 🟠 Nagad Parameters
 | Param | Default | Description |
@@ -132,6 +133,25 @@ Pass `type=binance`, `type=bk`, or `type=ng` (or `app=...`):
 | `time2` | *Current BD Time* | Message 2 custom time |
 | `date2` | *Current BD Date & Time* | Message 2 Transaction Date & Time |
 | `metaTime2` | *Auto-synchronized* | Message 2 arrival timestamp |
+| `font` | `0` (Classic) | Font style: `1` (random device font) or `samsung`, `pixel`, `oneplus`, `miui`, `oppo`, `hand` |
+
+---
+
+### 📱 Dynamic Device Font System (`?font=1`)
+
+To make screenshots look authentic and uniquely generated from different real mobile phones, pass `font=1`:
+
+- **Random Device Font (`?font=1` or `?font=random`)**: Randomly chooses one realistic smartphone font on every API call.
+- **Specific Brand Fonts**:
+  - `font=samsung` or `font=opensans`: Samsung Galaxy One UI font style
+  - `font=pixel` or `font=roboto`: Google Pixel / Stock Android Roboto font style
+  - `font=oneplus` or `font=inter`: OnePlus OxygenOS Inter font style
+  - `font=miui` or `font=xiaomi` or `font=nunito`: Xiaomi / Redmi MIUI rounded font style
+  - `font=oppo` or `font=vivo` or `font=outfit`: Oppo / Vivo ColorOS Outfit font style
+  - `font=hand` or `font=itim`: Theme store stylish handwritten font style
+  - `font=0` or omitted: Classic Patrick Hand font
+
+> 🔒 **Dual-Message Font Uniformity**: When 2nd message is active, both the 1st and 2nd messages automatically share the exact same device font for natural realism.
 
 > 💡 **Time & Auto-Sync Behavior**: 
 > - If `time` parameter is provided (e.g. `?time=16:05`), it sets the phone clock and message timestamp to that exact time.
