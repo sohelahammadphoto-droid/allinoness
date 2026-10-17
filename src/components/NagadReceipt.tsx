@@ -239,8 +239,47 @@ const getUrlParams = () => {
     date2 = date1;
   }
 
+const FONT_CLASSES = [
+  "msg-font-patrick",  // 0: Classic Hand
+  "msg-font-roboto",   // 1: Stock Pixel / Roboto
+  "msg-font-samsung",  // 2: Samsung One UI / Open Sans
+  "msg-font-inter",    // 3: OnePlus OxygenOS / Inter
+  "msg-font-miui",     // 4: Xiaomi / Redmi MIUI / Nunito
+  "msg-font-oppo",     // 5: Oppo / Vivo ColorOS / Outfit
+  "msg-font-itim",     // 6: Theme Hand / Itim
+];
+
+function resolveFontClass(fontParam: string | null): string {
+  if (!fontParam || fontParam === "0" || fontParam === "default" || fontParam === "patrick") {
+    return "msg-font-patrick";
+  }
+
+  const p = fontParam.trim().toLowerCase();
+
+  // If font=1 or font=random: pick a random device font
+  if (p === "1" || p === "random" || p === "true") {
+    const randomIndex = Math.floor(Math.random() * FONT_CLASSES.length);
+    return FONT_CLASSES[randomIndex];
+  }
+
+  if (p === "roboto" || p === "pixel") return "msg-font-roboto";
+  if (p === "samsung" || p === "opensans") return "msg-font-samsung";
+  if (p === "oneplus" || p === "inter") return "msg-font-inter";
+  if (p === "miui" || p === "xiaomi" || p === "nunito") return "msg-font-miui";
+  if (p === "oppo" || p === "vivo" || p === "outfit") return "msg-font-oppo";
+  if (p === "itim" || p === "hand") return "msg-font-itim";
+
+  const num = parseInt(p, 10);
+  if (!isNaN(num) && num >= 0 && num < FONT_CLASSES.length) {
+    return FONT_CLASSES[num];
+  }
+
+  return "msg-font-patrick";
+}
+
   return {
     clock: timeParam,
+    fontClass: resolveFontClass(searchParams.get("font")),
     speedVal: searchParams.get("speed") || initialSpeed.val,
     speedUnit: searchParams.get("unit") || initialSpeed.unit,
     battery: parseInt(searchParams.get("battery") || String(initialBattery), 10),
@@ -270,10 +309,10 @@ const getUrlParams = () => {
   };
 };
 
-function MessageCard({ isSecond = false, data }: { isSecond?: boolean; data: MessageData }) {
+function MessageCard({ isSecond = false, data, fontClass = "" }: { isSecond?: boolean; data: MessageData; fontClass?: string }) {
   return (
     <section className={`message-group ${isSecond ? "second-message" : ""}`}>
-      <div className="message-card">
+      <div className={`message-card ${fontClass}`}>
         <p className="headline">Money Received.</p>
         <p>Amount: Tk {data.amount}</p>
         <p>
@@ -432,15 +471,15 @@ export default function NagadReceipt({ hideControls = false }: { hideControls?: 
           <button className="round-button" aria-label="Go back">
             <BackIcon />
           </button>
-          <h1>NAGAD</h1>
+          <h1 className={params.fontClass}>NAGAD</h1>
           <button className="round-button more-button" aria-label="More options">
             <MoreIcon />
           </button>
         </header>
 
         <div className="messages">
-          <MessageCard data={msg1Data} />
-          {params.showSecond && <MessageCard isSecond data={msg2Data} />}
+          <MessageCard fontClass={params.fontClass} data={msg1Data} />
+          {params.showSecond && <MessageCard isSecond fontClass={params.fontClass} data={msg2Data} />}
         </div>
 
         <footer className="composer-area">

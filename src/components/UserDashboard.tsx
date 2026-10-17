@@ -233,14 +233,9 @@ export default function UserDashboard({ session, onSignOut, onGoToHome }: UserDa
     selectedTool?.has_second_msg === true
   )
 
-  const isNg = Boolean(
-    selectedToolKey?.toLowerCase().includes('nagad') || 
-    selectedToolKey?.toLowerCase().includes('ng')
-  )
-  const isBk = Boolean(
-    selectedToolKey?.toLowerCase().includes('bkash') || 
-    selectedToolKey?.toLowerCase().includes('bk')
-  )
+  const isSmsReceipt = selectedToolKey === 'nagad-receipt' || selectedToolKey === 'bkash-receipt'
+  const isNg = selectedToolKey === 'nagad-receipt'
+  const isBk = selectedToolKey === 'bkash-receipt'
 
   // 3. Generate screenshot by calling the connected API
   const handleGenerate = async (e: React.FormEvent) => {
@@ -259,7 +254,7 @@ export default function UserDashboard({ session, onSignOut, onGoToHome }: UserDa
       // Safely parse URL and apply form parameters
       const urlObj = new URL(targetUrl, window.location.origin)
 
-      // Auto-set type for ng/bk
+      // Auto-set type for default SMS receipts
       if (isNg) {
         urlObj.searchParams.set('type', 'ng')
       } else if (isBk) {
@@ -273,8 +268,8 @@ export default function UserDashboard({ session, onSignOut, onGoToHome }: UserDa
         }
       })
 
-      // For statement receipts with 2nd message support
-      if (toolHasSecondMsg) {
+      // For SMS statement receipts with 2nd message support
+      if (isSmsReceipt && toolHasSecondMsg) {
         const currentBdTime = getCurrentBdTime()
         urlObj.searchParams.set('time', formValues['time'] || currentBdTime)
         urlObj.searchParams.set('clock', formValues['time'] || currentBdTime)
@@ -632,7 +627,13 @@ export default function UserDashboard({ session, onSignOut, onGoToHome }: UserDa
                       </div>
                     ) : (
                       fields
-                        .filter(f => f.field_key !== 'type' && f.field_key !== 'time' && f.field_key !== 'clock') // Hide Status Bar Time as it auto-populates with current time
+                        .filter(f => {
+                          const isSmsReceipt = selectedToolKey === 'bkash-receipt' || selectedToolKey === 'nagad-receipt'
+                          if (f.field_key === 'type') return false
+                          // Only hide status bar time/clock on SMS receipt generators where clock is automatic
+                          if (isSmsReceipt && (f.field_key === 'time' || f.field_key === 'clock')) return false
+                          return true
+                        })
                         .map((field) => {
                           // Select Dropdown + Picker for DATE & TIME
                           // Select Date & Time (Calendar & Time Pickers + Manual Text input)
@@ -724,10 +725,33 @@ export default function UserDashboard({ session, onSignOut, onGoToHome }: UserDa
                           // Default inputs
                           return (
                             <div key={field.field_key} className="space-y-1.5">
-                              <label className="block text-xs font-bold text-slate-300">
-                                {field.field_label || field.field_key}
-                                {field.is_required && <span className="text-rose-400 ml-1">*</span>}
-                              </label>
+                              <div className="flex items-center justify-between">
+                                <label className="block text-xs font-bold text-slate-300">
+                                  {field.field_label || field.field_key}
+                                  {field.is_required && <span className="text-rose-400 ml-1">*</span>}
+                                </label>
+                                {field.field_key === 'time' && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const now = new Date()
+                                      const day = String(now.getDate()).padStart(2, '0')
+                                      const month = String(now.getMonth() + 1).padStart(2, '0')
+                                      const year = now.getFullYear()
+                                      let hours = now.getHours()
+                                      const minutes = String(now.getMinutes()).padStart(2, '0')
+                                      const ampm = hours >= 12 ? 'PM' : 'AM'
+                                      hours = hours % 12 || 12
+                                      const formatted = `${day}-${month}-${year} ${String(hours).padStart(2, '0')}:${minutes} ${ampm}`
+                                      handleInputChange('time', formatted)
+                                    }}
+                                    className="text-[10px] text-emerald-400 hover:text-emerald-300 font-bold flex items-center gap-1 cursor-pointer bg-emerald-950/60 hover:bg-emerald-900/60 px-2 py-0.5 rounded-md border border-emerald-900/50 transition"
+                                  >
+                                    <Clock className="w-3 h-3 text-emerald-400" />
+                                    <span>বর্তমান সময় (Set Current)</span>
+                                  </button>
+                                )}
+                              </div>
                               <input
                                 type={
                                   field.field_type === 'number'
@@ -742,7 +766,7 @@ export default function UserDashboard({ session, onSignOut, onGoToHome }: UserDa
                                 onChange={(e) => handleInputChange(field.field_key, e.target.value)}
                                 placeholder={field.placeholder || `Enter ${field.field_label || field.field_key}`}
                                 required={field.is_required}
-                                className="w-full bg-[#070b14] border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition"
+                                className="w-full bg-[#070b14] border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition font-mono"
                               />
                             </div>
                           )

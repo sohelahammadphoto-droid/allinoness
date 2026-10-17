@@ -1,3 +1,5 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Itim&family=Nunito:wght@400;600;700&family=Open+Sans:wght@400;600;700&family=Outfit:wght@400;500;600;700&family=Patrick+Hand&family=Roboto:wght@400;500;700&display=swap");
+
 /* Scoped bKash Mobile Receipt Styles */
 .bkash-container {
   font-family: Arial, Helvetica, sans-serif;
@@ -181,6 +183,54 @@
   font-size: 22px;
   line-height: 1.5;
   letter-spacing: 0.15px;
+}
+
+/* Device Font Classes */
+.bkash-container .msg-font-patrick {
+  font-family: "Patrick Hand", cursive !important;
+  font-size: 22px !important;
+  line-height: 1.5 !important;
+}
+
+.bkash-container .msg-font-roboto {
+  font-family: "Roboto", -apple-system, BlinkMacSystemFont, sans-serif !important;
+  font-size: 14.5px !important;
+  line-height: 1.45 !important;
+  letter-spacing: 0.1px;
+}
+
+.bkash-container .msg-font-samsung {
+  font-family: "Open Sans", "Noto Sans", sans-serif !important;
+  font-size: 14px !important;
+  line-height: 1.45 !important;
+  letter-spacing: 0.1px;
+}
+
+.bkash-container .msg-font-inter {
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif !important;
+  font-size: 14px !important;
+  line-height: 1.45 !important;
+  letter-spacing: 0.1px;
+}
+
+.bkash-container .msg-font-miui {
+  font-family: "Nunito", sans-serif !important;
+  font-size: 14.5px !important;
+  line-height: 1.45 !important;
+  font-weight: 600;
+}
+
+.bkash-container .msg-font-oppo {
+  font-family: "Outfit", sans-serif !important;
+  font-size: 14px !important;
+  line-height: 1.45 !important;
+  letter-spacing: 0.2px;
+}
+
+.bkash-container .msg-font-itim {
+  font-family: "Itim", cursive !important;
+  font-size: 17px !important;
+  line-height: 1.45 !important;
 }
 
 .bkash-container .message-card p {

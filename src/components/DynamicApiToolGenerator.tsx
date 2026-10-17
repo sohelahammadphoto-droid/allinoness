@@ -106,7 +106,9 @@ export default function DynamicApiToolGenerator({
       const [base, queryString] = raw.split('?')
       if (!queryString) return
       
-      const searchParams = new URLSearchParams(queryString)
+      // Auto-repair missing '&' between glued parameters (e.g. 5000trxid=73ABCDEF -> 5000&trxid=73ABCDEF)
+      const repairedQueryString = queryString.replace(/([0-9a-zA-Z])(?=(trxid|trxId|time|sender|recipient|receiver|amount|ref|balance|fee|usd|name|number)=)/gi, '$1&')
+      const searchParams = new URLSearchParams(repairedQueryString)
       const newParams: ApiParameter[] = []
       const fixedParams = new URLSearchParams()
 
